@@ -177,3 +177,9 @@
   --heading-hero: clamp(2.25rem, 5vw, 3.25rem);
   --color-bg-warm: #f5f1ec;
 }
+
+/* Scrim: dims and blurs the page behind modals and dropdowns */
+:root {
+  --scrim: rgb(20 20 20 / 0.4);
+  --scrim-blur: 6px;
+}

@@ -40,6 +40,7 @@ Fonts come from fontsource packages. `next/font` is gone. Utilities: `font-sans`
 | `bg-destructive` | #CC0001 |
 | `border-border`, `border-border-subtle` | #D2D4DA, 40% of that |
 | `bg-overlay-dark`, `bg-overlay-light` | #000, #FFF. Fixed in every theme, for text on images |
+| `bg-scrim`, `backdrop-blur-(--scrim-blur)` | rgb(20 20 20 / 0.4), 6px. Dims and blurs the page behind search. Use for every modal and dropdown |
 
 Header and card surfaces use `bg-card` (white). Page background is `bg-background`, which is slightly tinted.
 
@@ -97,7 +98,7 @@ Other components depend on these names, so do not rename them.
 - Always render menu titles through `parseNavMenu`, on desktop and mobile. Never print raw `item.title`.
 - Dropdowns need Escape to close, `aria-expanded` and `aria-haspopup` on triggers, and keyboard access to the panel.
 - Do not start hide-on-scroll while keyboard focus is inside the header. Use `:has(:focus-visible)`, not `:focus-within`, which would pin the header open after a mouse click.
-- Honor `prefers-reduced-motion` for looping or sliding animation.
+- Honor `prefers-reduced-motion` for looping or sliding animation. Exception: the search pill typewriter always runs on desktop (owner decision, matches the Next.js site).
 - Text on `bg-card` must meet 4.5:1. `text-foreground/60` passes. `/50` and `/40` do not.
 - No hardcoded English in new code once `use-intl` is added.
 
@@ -105,15 +106,6 @@ Other components depend on these names, so do not rename them.
 
 | Where | Now | Should be |
 | --- | --- | --- |
-| Announcement variants | `#b3c7ee`, `#f7f78f`, `bg-black` | tokens (design decision for periwinkle and sunny) |
-| Announcement type and icons | `text-[13px]`, `text-[15px]`, `size-[22px]` | `text-ds-small`, `text-ds-regular` |
-| Dropdown overlay | `bg-[rgba(20,20,20,0.4)] backdrop-blur-[6px]` | one scrim token |
-| Search backdrop | `bg-black/40 backdrop-blur-sm` | same scrim token |
-| Zip dialog backdrop | `bg-black/50`, no blur | same scrim token |
-| Search image captions | `bg-black/55 text-white` | `bg-overlay-dark/55 text-overlay-light` |
-| "Clear recent" | `text-blue-600` | no blue in the system |
-| Typewriter trail colors | `#c9b0f5`, `#a57ef0`, `#6d3fc4` | near `--color-secondary-300/500/700` |
-| Zip dialog radius | `rounded-2xl` | `rounded-ds-lg` |
 | Dropdown padding | `px-5 lg:px-10` | match `Container` padding |
 
 Missing tokens: background blur, motion durations and easings, a z-index scale. One theme (light).

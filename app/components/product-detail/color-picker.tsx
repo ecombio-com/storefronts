@@ -1,0 +1,61 @@
+import {cn} from 'cn';
+import type {ComponentProps} from 'react';
+import LocalizedLink from '~/components/ui/localized-link';
+import {Swatch} from '~/components/ui/swatch';
+import type {OptionGroupState} from './types';
+
+interface ColorPickerProps extends ComponentProps<'div'> {
+  hideImages?: boolean;
+  option: OptionGroupState;
+}
+
+export function ColorPicker({hideImages, option, className, ...props}: ColorPickerProps) {
+  const selectedValue = option.values.find((value) => value.selected)?.name ?? '';
+  return (
+    <div className={cn('grid gap-2.5', className)} {...props}>
+      <p className="text-ds-regular font-semibold text-foreground">
+        {option.name}: <span className="font-normal text-foreground/60">{selectedValue}</span>
+      </p>
+      <div className="flex flex-wrap gap-2.5">
+        {option.values.map((value) => {
+          const imageUrl = hideImages
+            ? undefined
+            : value.swatch?.image || (value.swatch?.color ? undefined : value.image);
+          const swatch = (
+            <Swatch
+              color={value.swatch?.color}
+              image={imageUrl}
+              label={value.name}
+              selected={value.selected}
+            />
+          );
+          if (!value.exists || !value.available) {
+            return (
+              <span
+                key={value.name}
+                className="block cursor-not-allowed opacity-40"
+                aria-label={`${option.name}: ${value.name} (unavailable)`}
+              >
+                {swatch}
+              </span>
+            );
+          }
+          return (
+            <LocalizedLink
+              key={value.name}
+              href={value.href}
+              replace
+              preventScrollReset
+              prefetch="intent"
+              className="block cursor-pointer"
+              aria-label={`Select ${option.name}: ${value.name}`}
+              aria-current={value.selected ? 'true' : undefined}
+            >
+              {swatch}
+            </LocalizedLink>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

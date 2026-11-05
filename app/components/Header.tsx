@@ -5,7 +5,7 @@ import {
   useAnalytics,
   useOptimisticCart,
 } from '@shopify/hydrogen';
-import {LifeBuoy, Menu, Repeat, Search, ShieldCheck} from 'lucide-react';
+import {CreditCard, LifeBuoy, Repeat, ShieldCheck} from 'lucide-react';
 import LocalizedLink from '~/components/ui/localized-link';
 import {useUrlLocale} from '~/components/ui/locale-context';
 import {BagIcon, PersonIcon} from '~/components/ui/icons';
@@ -16,6 +16,10 @@ import {ScrollFade} from '~/components/nav/scroll-fade';
 import {QuickLinks} from '~/components/nav/quick-links';
 import {NavScrollBehavior} from '~/components/nav/nav-scroll-behavior';
 import {NavHeightSync} from '~/components/nav/nav-height-sync';
+import {SearchModal} from '~/components/nav/search-modal';
+import {MobileMenu} from '~/components/nav/mobile-menu';
+import {Announcement} from '~/components/nav/announcement-bar';
+import {ZipCode} from '~/components/nav/zip-code';
 import {parseNavMenu, type MenuItem, type RawMenuItem} from '~/lib/menu';
 
 interface HeaderProps {
@@ -24,8 +28,6 @@ interface HeaderProps {
   isLoggedIn: Promise<boolean>;
   publicStoreDomain: string;
 }
-
-type Viewport = 'desktop' | 'mobile';
 
 const FALLBACK_ITEMS: MenuItem[] = [
   {id: 'default-nav-shop', title: 'Shop', url: '/collections/all', image: null, items: []},
@@ -40,6 +42,7 @@ const UTILITY_LINKS = [
 
 // Tier 3, right side.
 const EXTRA_LINKS = [
+  {label: 'Pay over time', url: '/pages/financing', icon: CreditCard, className: ''},
   {label: 'Trade in', url: '/pages/trade-in', icon: Repeat, className: ''},
   {label: 'Support', url: '/pages/contact', icon: LifeBuoy, className: 'hidden xl:block'},
 ];
@@ -66,6 +69,7 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}: HeaderProp
       >
         <NavScrollBehavior />
         <NavHeightSync />
+        <Announcement />
 
         {/* Tier 1: utility bar (desktop only) */}
         <div className="hidden md:block">
@@ -82,13 +86,16 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}: HeaderProp
                 </LocalizedLink>
               ))}
             </ScrollFade>
+            <div className="flex shrink-0 items-center gap-4">
+              <ZipCode />
+            </div>
           </Container>
         </div>
 
         {/* Tier 2: logo, search pill, help, account, cart. Search wraps to its own row on mobile. */}
         <Container className="flex flex-wrap items-center gap-x-2.5 gap-y-2 py-2 md:flex-nowrap md:gap-5">
           <div className="flex-1 basis-0 md:hidden">
-            <MobileMenuToggle />
+            <MobileMenu items={navItems} isLoggedIn={isLoggedIn} />
           </div>
 
           <LocalizedLink
@@ -100,7 +107,7 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}: HeaderProp
           </LocalizedLink>
 
           <div className="order-last w-full md:order-none md:w-auto md:min-w-0 md:flex-1">
-            <SearchPill />
+            <SearchModal />
           </div>
 
           <div className="ml-auto flex flex-1 basis-0 items-center justify-end gap-5 md:flex-none md:basis-auto">
@@ -153,123 +160,6 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}: HeaderProp
         </div>
       </header>
     </>
-  );
-}
-
-function MenuLink({
-  url,
-  children,
-  className,
-  onClick,
-}: {
-  url: string;
-  children: ReactNode;
-  className?: string;
-  onClick?: () => void;
-}) {
-  if (/^(https?:|mailto:|tel:)/i.test(url)) {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className={className} onClick={onClick}>
-        {children}
-      </a>
-    );
-  }
-  return (
-    <LocalizedLink href={url} className={className} onClick={onClick}>
-      {children}
-    </LocalizedLink>
-  );
-}
-
-function MenuTree({
-  items,
-  onNavigate,
-  depth = 0,
-}: {
-  items: MenuItem[];
-  onNavigate: () => void;
-  depth?: number;
-}) {
-  return (
-    <ul className={depth === 0 ? 'flex flex-col gap-3' : 'mt-2 flex flex-col gap-2 pl-3'}>
-      {items.map((item) => (
-        <li key={item.id}>
-          <MenuLink
-            url={item.url}
-            onClick={onNavigate}
-            className={
-              depth === 0
-                ? 'text-ds-regular font-medium hover:opacity-70'
-                : 'text-ds-regular text-muted-foreground hover:text-foreground'
-            }
-          >
-            {item.title}
-          </MenuLink>
-          {item.items.length > 0 && (
-            <MenuTree items={item.items} onNavigate={onNavigate} depth={depth + 1} />
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// Mobile drawer menu. Titles go through parseNavMenu so [mega-menu] style tags never show.
-export function HeaderMenu({
-  menu,
-  primaryDomainUrl,
-  viewport,
-  publicStoreDomain,
-}: {
-  menu: HeaderProps['header']['menu'];
-  primaryDomainUrl: HeaderProps['header']['shop']['primaryDomain']['url'];
-  viewport: Viewport;
-  publicStoreDomain: HeaderProps['publicStoreDomain'];
-}) {
-  const {close} = useAside();
-  const parsed = parseNavMenu(
-    (menu?.items ?? []) as unknown as RawMenuItem[],
-    publicStoreDomain,
-    primaryDomainUrl,
-  );
-  const items = parsed.length > 0 ? parsed : FALLBACK_ITEMS;
-  const isMobile = viewport === 'mobile';
-
-  return (
-    <nav
-      aria-label="Main menu"
-      className={isMobile ? 'header-menu-mobile' : 'flex items-center gap-6 text-ds-regular font-medium'}
-    >
-      <MenuTree items={items} onNavigate={close} />
-    </nav>
-  );
-}
-
-function MobileMenuToggle() {
-  const {open} = useAside();
-  return (
-    <button
-      type="button"
-      aria-label="Open menu"
-      onClick={() => open('mobile')}
-      className="-ml-2 inline-flex items-center p-2"
-    >
-      <Menu className="size-6" aria-hidden="true" />
-    </button>
-  );
-}
-
-function SearchPill() {
-  const {open} = useAside();
-  return (
-    <button
-      type="button"
-      onClick={() => open('search')}
-      className="flex h-10 w-full items-center gap-2 rounded-ds-md border border-border bg-background px-3 text-left text-ds-regular text-muted-foreground transition-colors hover:border-foreground/40"
-    >
-      <Search className="size-4 shrink-0" aria-hidden="true" />
-      <span className="truncate">Search</span>
-    </button>
   );
 }
 

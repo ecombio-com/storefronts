@@ -1,0 +1,98 @@
+.ds-specs {
+  font-size: var(--text-small);
+  line-height: 1.4;
+  color: var(--color-text-dark);
+}
+.ds-specs-muted {
+  margin: 0 0 var(--spacer-medium);
+  color: color-mix(in srgb, var(--color-text-dark) 70%, transparent);
+}
+
+.ds-specs-tiles {
+  list-style: none;
+  margin: 0 0 var(--spacer-regular);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacer-small);
+}
+.ds-specs-tiles li {
+  flex: 1 1 calc(20% - var(--spacer-small));
+  min-width: 0;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacer-small);
+  text-align: center;
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius-medium);
+  box-shadow: var(--shadow-drop-xs);
+}
+.ds-specs-tiles b {
+  font-weight: var(--weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.ds-specs dl {
+  margin: 0;
+  display: grid;
+  column-gap: var(--spacer-large);
+  grid-template-columns: repeat(3, 1fr);
+}
+.ds-specs dl > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacer-small);
+  min-height: 26px;
+  padding: 6px 0;
+  border-top: var(--border-width-medium) solid
+    color-mix(in srgb, var(--color-text-dark) 12%, transparent);
+}
+.ds-specs dt {
+  margin: 0;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--color-text-dark) 70%, transparent);
+}
+.ds-specs dd {
+  margin: 0;
+  line-height: 1.2;
+  font-weight: var(--weight-bold);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1023px) {
+  .ds-specs dl {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ds-specs-tiles li {
+    flex-basis: calc(33.333% - var(--spacer-small));
+  }
+}
+@media (max-width: 767px) {
+  .ds-specs dl {
+    grid-template-columns: 1fr;
+  }
+  .ds-specs-tiles li {
+    flex-basis: calc(50% - var(--spacer-small));
+  }
+  .ds-specs-tiles li:nth-child(n + 7) {
+    display: none;
+  }
+}
+/* Softer palette: muted tile labels and table values; headline tile values stay dark */
+.ds-specs {
+  --specs-muted: color-mix(in srgb, var(--color-text-dark) 70%, transparent);
+}
+.ds-specs-tiles li {
+  color: var(--specs-muted);
+}
+.ds-specs-tiles b {
+  color: var(--color-text-dark);
+}
+.ds-specs dd {
+  color: var(--specs-muted);
+}

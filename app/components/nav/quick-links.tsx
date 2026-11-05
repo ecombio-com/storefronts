@@ -96,7 +96,7 @@ function NavItem({item: rawItem}: {item: MenuItem}) {
         </div>
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-full h-screen bg-[rgba(20,20,20,0.4)] backdrop-blur-[6px]"
+          className="pointer-events-none absolute inset-x-0 top-full h-screen bg-scrim backdrop-blur-(--scrim-blur)"
         />
       </div>
     </li>

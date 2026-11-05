@@ -79,3 +79,48 @@ export function parseSpecs(metafield: MetaobjectList): ProductSpec[] {
   }
   return specs;
 }
+
+export function getYouTubeId(url?: string | null) {
+  return url?.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/)?.[1];
+}
+
+const ACCORDION =
+  /(?:<p>\s*)?\[accordion:\s*([^\]]*?)\s*\](?:\s*<\/p>)?([\s\S]*?)(?:<p>\s*)?\[\/accordion\](?:\s*<\/p>)?/g;
+
+export function parseAccordions(html: string) {
+  return Array.from(html.matchAll(ACCORDION), (m) => ({
+    question: m[1],
+    answer: m[2].trim(),
+  }));
+}
+
+export function parsePopularSearches(mf?: {value?: string | null} | null): string[] {
+  if (!mf?.value) return [];
+  try {
+    const p: unknown = JSON.parse(mf.value);
+    return Array.isArray(p)
+      ? p.filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+type IntMf = {value?: string | null} | null | undefined;
+const days = (f: IntMf) => {
+  const n = Number.parseInt(f?.value ?? '', 10);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+};
+
+export function parseDelivery(p: {
+  handlingDaysMin?: IntMf;
+  handlingDaysMax?: IntMf;
+  transitExtraDays?: IntMf;
+}) {
+  const d = {
+    handlingDaysMin: days(p.handlingDaysMin),
+    handlingDaysMax: days(p.handlingDaysMax),
+    transitExtraDays: days(p.transitExtraDays),
+  };
+  return Object.values(d).every((v) => v === undefined) ? undefined : d;
+}

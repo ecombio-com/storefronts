@@ -304,3 +304,8 @@ body {
   --font-geist-mono: "Geist Mono Variable", ui-monospace, monospace;
   --font-fraunces: "Fraunces Variable";
 }
+
+/* Scrim utility: bg-scrim (pair with backdrop-blur-(--scrim-blur)) */
+@theme inline {
+  --color-scrim: var(--scrim);
+}
