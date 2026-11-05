@@ -16,7 +16,14 @@ import {parseSpecs, parseTrustBadges} from '~/lib/product';
 
 export const meta: Route.MetaFunction = ({data}) => {
   return [
-    {title: `Hydrogen | ${data?.product.title ?? ''}`},
+    {title: data?.product.seo?.title || data?.product.title || ''},
+    {
+      name: 'description',
+      content:
+        data?.product.seo?.description ||
+        data?.product.description?.slice(0, 160) ||
+        '',
+    },
     {
       rel: 'canonical',
       href: `/products/${data?.product.handle}`,
