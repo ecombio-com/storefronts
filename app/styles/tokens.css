@@ -1,0 +1,179 @@
+/* Design tokens from the foundations PDFs (Back Market reference system).
+   Mobile values are the base; desktop overrides at min-width: 768px.
+   ASSUMPTIONS to confirm: the 768px breakpoint, font weights, line height,
+   blur values (TODO). */
+
+:root {
+  /* ---------- Colors ---------- */
+  --color-primary-50: #fcffe6;
+  --color-primary-100: #f6fdca;
+  --color-primary-200: #edfb9b;
+  --color-primary-300: #e3f77e;
+  --color-primary-400: #c9ea31;
+  --color-primary-500: #abd012;
+  --color-primary-600: #85a60a;
+  --color-primary-700: #647e0d;
+  --color-primary-800: #506410;
+  --color-primary-900: #435413;
+  --color-primary-950: #232f04;
+
+  --color-secondary-50: #faf6fe;
+  --color-secondary-100: #f3eafd;
+  --color-secondary-200: #e9d9fb;
+  --color-secondary-300: #d9bbf7;
+  --color-secondary-400: #c18ff1;
+  --color-secondary-500: #aa64e8;
+  --color-secondary-600: #9444d9;
+  --color-secondary-700: #7f32be;
+  --color-secondary-800: #6b2e9b;
+  --color-secondary-900: #58267d;
+  --color-secondary-950: #3b105b;
+
+  --color-brand-primary: var(--color-primary-300); /* #E3F77E */
+  --color-brand-secondary: var(--color-secondary-300); /* #D9BBF7 */
+
+  --color-text-dark: #0e1016;
+  --color-text-light: #ffffff;
+  --color-bg-primary: #f8f9fc;
+  --color-bg-secondary: #ffffff;
+  /* --color-border: #2f3137; -- disabled: conflicts with globals.css */
+
+  /* --color-success: #219653; -- disabled: conflicts with globals.css */
+  --color-warning: #c2410c;
+  --color-danger: #ef4444;
+
+  /* ---------- Typography ---------- */
+  --font-heading: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-geist-sans), system-ui, sans-serif;
+  --weight-bold: 700;
+  --weight-regular: 400;
+  --weight-light: 300;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --heading-h1: 2.25rem;
+  --heading-h2: 1.5rem;
+  --heading-h3: 1.125rem;
+  --heading-h4: 0.9375rem;
+  --heading-h5: 0.75rem;
+  --text-large: 1.375rem;
+  --text-medium: 1.125rem;
+  --text-regular: 0.875rem;
+  --text-small: 0.75rem;
+  --text-tiny: 0.625rem;
+
+  /* ---------- Spacing ---------- */
+  --spacer-xxsmall: 3px;
+  --spacer-xsmall: 6px;
+  --spacer-small: 9px;
+  --spacer-regular: 12px;
+  --spacer-medium: 24px;
+  --spacer-large: 36px;
+  --spacer-xlarge: 48px;
+  --spacer-xxlarge: 60px;
+  --padding-global: 24px;
+  --padding-section-small: 36px;
+  --padding-section-medium: 60px;
+  --padding-section-large: 72px;
+
+  /* ---------- Borders ---------- */
+  --border-width-small: 0.25px;
+  --border-width-medium: 0.5px;
+  --border-width-large: 1px;
+  --border-radius-small: 3px;
+  --border-radius-medium: 6px;
+  --border-radius-large: 12px;
+
+  /* ---------- Grid ---------- */
+  --grid-gutter: 12px;
+  --container-max: 1440px; /* 1312px inner + 2 x 64px margins */
+
+  /* ---------- Logo ---------- */
+  --logo-icon-size: 32px;
+  --logo-width: 49px;
+  --logo-height: 24px;
+
+  /* ---------- Shadows ---------- */
+  --shadow-drop-xs: 0 4px 6px 0 rgb(0 0 0 / 0.05);
+  --shadow-drop-sm: 0 4px 10px 0 rgb(0 0 0 / 0.1);
+  --shadow-drop-md: 0 4px 20px 0 rgb(0 0 0 / 0.12);
+  --shadow-drop-lg: 0 4px 25px 0 rgb(0 0 0 / 0.15);
+  --shadow-drop-xl: 0 4px 40px 0 rgb(0 0 0 / 0.2);
+  --shadow-inner-xs: inset -1px -2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-inner-sm: inset -1px -2px 10px 0 rgb(0 0 0 / 0.05);
+  --shadow-inner-md: inset -2px -4px 15px 0 rgb(0 0 0 / 0.08);
+  --shadow-inner-lg: inset -3px -6px 15px 0 rgb(0 0 0 / 0.08);
+  --shadow-inner-xl: inset -4px -8px 15px 0 rgb(0 0 0 / 0.1);
+
+  /* ---------- Blurs: TODO, read from Figma (Effects > Background blur) ---------- */
+  /* --blur-small: ?px; --blur-medium: ?px; --blur-large: ?px; */
+  /* --blur-tint-dark: rgb(? ? ? / ?); --blur-tint-light: rgb(? ? ? / ?); */
+}
+
+@media (min-width: 768px) {
+  :root {
+    --heading-h1: 3rem;
+    --heading-h2: 2rem;
+    --heading-h3: 1.5rem;
+    --heading-h4: 1.25rem;
+    --heading-h5: 1rem;
+    --text-large: 1.5rem;
+    --text-medium: 1.25rem;
+    --text-regular: 1rem;
+    --text-small: 0.875rem;
+    --text-tiny: 0.75rem;
+
+    --spacer-xxsmall: 4px;
+    --spacer-xsmall: 8px;
+    --spacer-small: 12px;
+    --spacer-regular: 16px;
+    --spacer-medium: 32px;
+    --spacer-large: 48px;
+    --spacer-xlarge: 64px;
+    --spacer-xxlarge: 80px;
+    --padding-global: 64px;
+    --padding-section-small: 48px;
+    --padding-section-medium: 80px;
+    --padding-section-large: 96px;
+
+    --border-width-small: 0.5px;
+    --border-width-medium: 1px;
+    --border-width-large: 2px;
+    --border-radius-small: 4px;
+    --border-radius-medium: 8px;
+    --border-radius-large: 16px;
+
+    --grid-gutter: 32px;
+    --logo-width: 73px;
+    --logo-height: 36px;
+  }
+}
+
+/* ---------- Layout helpers ----------
+   Namespaced and layered: the bare .container/.grid overrode Tailwind's own classes. */
+@layer components {
+  .ds-container {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    padding-inline: var(--padding-global);
+  }
+  .ds-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+    gap: var(--grid-gutter);
+  }
+}
+
+/* ---------- On-image colors (fixed in every theme) ---------- */
+:root {
+  --overlay-dark: #000000;
+  --overlay-light: #ffffff;
+}
+
+/* Page blocks */
+:root {
+  --heading-display: clamp(3.5rem, 8vw, 5.5rem);
+  --heading-hero: clamp(2.25rem, 5vw, 3.25rem);
+  --color-bg-warm: #f5f1ec;
+}

@@ -1,0 +1,141 @@
+import { useEffect } from "react";
+
+// Hide the sticky header on scroll down, show it again on scroll up (all screen sizes).
+// Any scrolling also collapses open dropdown menus. They stay closed until the pointer moves
+// again, leaves the header, or keyboard focus enters it.
+export function NavScrollBehavior() {
+  useEffect(() => {
+    const nav = document.getElementById("nav-outer");
+    if (!nav) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Reveal is slower and eases out (gentle landing). Hide is a bit quicker.
+    const SHOW_TRANSITION = "transform 700ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 300ms ease";
+    const HIDE_TRANSITION = "transform 450ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms ease";
+
+    const REDUCED_TRANSITION = "transform 150ms ease-out, box-shadow 150ms ease";
+    const setTransition = (value: string) => {
+      nav.style.transition = reduceMotion ? REDUCED_TRANSITION : value;
+    };
+    setTransition(SHOW_TRANSITION);
+
+    // Publish the header's visible height so sticky elements below it can follow it.
+    const root = document.documentElement;
+    const setOffset = (visible: boolean) => {
+      root.style.setProperty(
+        "--header-offset",
+        visible ? `${nav.offsetHeight}px` : "var(--buy-bar-offset, 0px)",
+      );
+      root.style.setProperty(
+        "--header-offset-transition",
+        reduceMotion
+          ? "top 150ms ease-out"
+          : visible
+            ? "top 700ms cubic-bezier(0.22, 1, 0.36, 1)"
+            : "top 450ms cubic-bezier(0.4, 0, 0.2, 1)",
+      );
+    };
+
+    const THRESHOLD = 8; // ignore tiny scroll jitters (px)
+    const MOVE_TO_REOPEN = 6; // pointer travel (px) that reopens menus after a scroll
+    let lastY = window.scrollY;
+    let ticking = false;
+
+    // --- Dropdown suppression -------------------------------------------------------------
+    const panels = () => nav.querySelectorAll<HTMLElement>("[data-nav-dropdown]");
+    let suppressed = false;
+    let pointer = { x: 0, y: 0 };
+    let anchor = { x: 0, y: 0 };
+
+    const suppress = () => {
+      if (suppressed) return;
+      suppressed = true;
+      anchor = pointer;
+      panels().forEach((panel) => {
+        panel.style.visibility = "hidden";
+        panel.style.opacity = "0";
+      });
+    };
+    const release = () => {
+      if (!suppressed) return;
+      suppressed = false;
+      panels().forEach((panel) => {
+        panel.style.visibility = "";
+        panel.style.opacity = "";
+      });
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      pointer = { x: event.clientX, y: event.clientY };
+      if (suppressed && Math.hypot(pointer.x - anchor.x, pointer.y - anchor.y) > MOVE_TO_REOPEN) {
+        release();
+      }
+    };
+
+    // --- Hide on scroll down, show on scroll up -------------------------------------------
+    const update = () => {
+      ticking = false;
+      const y = window.scrollY;
+      const delta = y - lastY;
+
+      nav.classList.toggle("shadow-ds-drop-xs", y > 0);
+      if (root.dataset.buyBar === "on") {
+        setTransition(HIDE_TRANSITION);
+        nav.style.transform = "translateY(-100%)";
+        setOffset(false);
+        lastY = y;
+        return;
+      }
+
+      if (y <= nav.offsetHeight) {
+        setTransition(SHOW_TRANSITION);
+        nav.style.transform = ""; // near the top: always visible
+        setOffset(true);
+        lastY = y;
+        return;
+      }
+      if (Math.abs(delta) < THRESHOLD) return;
+
+      if (delta > 0) {
+        setTransition(HIDE_TRANSITION);
+        nav.style.transform = "translateY(-100%)";
+        setOffset(false);
+      } else {
+        setTransition(SHOW_TRANSITION);
+        nav.style.transform = "";
+        setOffset(true);
+      }
+      lastY = y;
+    };
+
+    const onScroll = () => {
+      if (nav.matches(":has(:focus-visible)")) return;
+      suppress();
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    nav.addEventListener("pointermove", onPointerMove);
+    nav.addEventListener("pointerleave", release);
+    nav.addEventListener("focusin", release);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      nav.removeEventListener("pointermove", onPointerMove);
+      nav.removeEventListener("pointerleave", release);
+      nav.removeEventListener("focusin", release);
+      release();
+      nav.style.transform = "";
+      nav.style.transition = "";
+      root.style.removeProperty("--header-offset");
+      root.style.removeProperty("--header-offset-transition");
+      nav.classList.remove("shadow-ds-drop-xs");
+    };
+  }, []);
+
+  return null;
+}
+
