@@ -15,18 +15,47 @@ import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {parseSpecs, parseTrustBadges} from '~/lib/product';
 
 export const meta: Route.MetaFunction = ({data}) => {
+  const product = data?.product;
+  if (!product) return [{title: 'Product not found'}];
+  const title = product.seo?.title || product.title;
+  const description =
+    product.seo?.description || product.description?.slice(0, 160) || '';
+  const url = data.canonicalUrl;
+  const image = product.featuredImage?.url;
+  const variant = product.selectedOrFirstAvailableVariant;
   return [
-    {title: data?.product.seo?.title || data?.product.title || ''},
+    {title},
+    {name: 'description', content: description},
+    {tagName: 'link', rel: 'canonical', href: url},
+    {property: 'og:type', content: 'product'},
+    {property: 'og:title', content: title},
+    {property: 'og:description', content: description},
+    {property: 'og:url', content: url},
+    ...(image ? [{property: 'og:image', content: image}] : []),
     {
-      name: 'description',
-      content:
-        data?.product.seo?.description ||
-        data?.product.description?.slice(0, 160) ||
-        '',
-    },
-    {
-      rel: 'canonical',
-      href: `/products/${data?.product.handle}`,
+      'script:ld+json': {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.title,
+        description,
+        url,
+        ...(image ? {image: [image]} : {}),
+        ...(variant?.sku ? {sku: variant.sku} : {}),
+        brand: {'@type': 'Brand', name: product.vendor},
+        ...(variant
+          ? {
+              offers: {
+                '@type': 'Offer',
+                url,
+                priceCurrency: variant.price.currencyCode,
+                price: variant.price.amount,
+                availability: variant.availableForSale
+                  ? 'https://schema.org/InStock'
+                  : 'https://schema.org/OutOfStock',
+              },
+            }
+          : {}),
+      },
     },
   ];
 };
@@ -68,6 +97,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   redirectIfHandleIsLocalized(request, {handle, data: product});
 
   return {
+    canonicalUrl: new URL(request.url).origin + new URL(request.url).pathname,
     product,
     trustBadges: parseTrustBadges(product.trustBadges),
     specs: parseSpecs(product.specs),
