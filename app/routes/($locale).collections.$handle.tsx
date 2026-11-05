@@ -118,7 +118,7 @@ export async function loader({context, params, request}: Route.LoaderArgs) {
   );
 
   // No collection total in the Storefront API: sum the availability facet (in stock + out of stock), like Next.js.
-  const availability = collection.products.filters.find((filter) => /availab/i.test(`{filter.id} $(''){filter.label}`));
+  const availability = collection.products.filters.find((filter) => /availab/i.test(filter.id + ' ' + filter.label));
   const productCount = availability?.values.reduce((sum, value) => sum + value.count, 0) ?? 0;
   const articles = await articlesPromise;
 
