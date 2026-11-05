@@ -1,5 +1,6 @@
 import {useLoaderData} from 'react-router';
 import type {Route} from './+types/($locale).pages.$handle';
+import {isHiddenPageHandle} from '~/lib/hidden-pages';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 
 export const meta: Route.MetaFunction = ({data}) => {
@@ -34,7 +35,7 @@ async function loadCriticalData({context, request, params}: Route.LoaderArgs) {
     // Add other queries here, so that they are loaded in parallel
   ]);
 
-  if (!page) {
+  if (!page || isHiddenPageHandle(params.handle)) {
     throw new Response('Not Found', {status: 404});
   }
 
