@@ -32,6 +32,7 @@ export function localeRedirect(request: Request): Response | null {
   if (request.method !== 'GET' && request.method !== 'HEAD') return null;
   const url = new URL(request.url);
   const {pathname} = url;
+  if (pathname.endsWith('/__manifest')) return null;
   if (SKIP.test(pathname)) return null;
   const match = pathname.match(LOCALE_SHAPE);
   let target: string | null = null;
