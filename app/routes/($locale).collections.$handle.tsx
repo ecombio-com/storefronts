@@ -2,9 +2,9 @@ import {redirect, useLoaderData} from 'react-router';
 import type {Route} from './+types/($locale).collections.$handle';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {ProductCard} from '~/components/product-card/product-card';
+import {PRODUCT_CARD_FRAGMENT, toProductCardData} from '~/lib/product-card';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
-import {ProductItem} from '~/components/ProductItem';
-import type {ProductItemFragment} from 'storefrontapi.generated';
 
 export const meta: Route.MetaFunction = ({data}) => {
   return [{title: `Hydrogen | ${data?.collection.title ?? ''} Collection`}];
@@ -69,17 +69,17 @@ export default function Collection() {
   const {collection} = useLoaderData<typeof loader>();
 
   return (
-    <div className="collection">
+    <div className="collection ds-container">
       <h1>{collection.title}</h1>
       <p className="collection-description">{collection.description}</p>
-      <PaginatedResourceSection<ProductItemFragment>
+      <PaginatedResourceSection<(typeof collection.products.nodes)[number]>
         connection={collection.products}
-        resourcesClassName="products-grid"
+        resourcesClassName="grid grid-cols-2 gap-(--grid-gutter) lg:grid-cols-4"
       >
         {({node: product, index}) => (
-          <ProductItem
+          <ProductCard
             key={product.id}
-            product={product}
+            product={toProductCardData(product)}
             loading={index < 8 ? 'eager' : undefined}
           />
         )}
@@ -96,6 +96,7 @@ export default function Collection() {
   );
 }
 
+// Unused here. Kept until #13 Cleanup so codegen still emits ProductItemFragment for ProductItem.tsx.
 const PRODUCT_ITEM_FRAGMENT = `#graphql
   fragment MoneyProductItem on MoneyV2 {
     amount
@@ -125,7 +126,7 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
 
 // NOTE: https://shopify.dev/docs/api/storefront/2022-04/objects/collection
 const COLLECTION_QUERY = `#graphql
-  ${PRODUCT_ITEM_FRAGMENT}
+  ${PRODUCT_CARD_FRAGMENT}
   query Collection(
     $handle: String!
     $country: CountryCode
@@ -147,7 +148,7 @@ const COLLECTION_QUERY = `#graphql
         after: $endCursor
       ) {
         nodes {
-          ...ProductItem
+          ...ProductCardItem
         }
         pageInfo {
           hasPreviousPage

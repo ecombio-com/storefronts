@@ -2,9 +2,7 @@ import {Await, redirect, useLoaderData} from 'react-router';
 import {Suspense} from 'react';
 import {ProductReviews, StarRating} from '~/@yotpo';
 import {Money} from '@shopify/hydrogen';
-import {SpecCarousel, TrustBadges} from '~/components/ProductHighlights';
-import {StickyBuyBar} from '~/components/StickyBuyBar';
-import {DeliveryEstimate} from '~/components/DeliveryEstimate';
+import {DeliveryEstimate} from '~/components/product-detail/delivery-estimate';
 import type {Route} from './+types/($locale).products.$handle';
 import {
   getSelectedProductOptions,
@@ -22,17 +20,34 @@ import {BuyButtons} from '~/components/product-detail/buy-buttons';
 import {FloatingBuyBlock} from '~/components/product-detail/floating-buy-block';
 import {FrequentlyAskedQuestionsSection} from '~/components/product-detail/frequently-asked-questions-section';
 import {PopularSearches} from '~/components/product-detail/popular-searches';
-import {ProductFormOptions} from '~/components/product-detail/product-form';
+import {ProductHighlights} from '~/components/product-detail/product-highlights';
+import {ProductFormOptions, toOptionGroups} from '~/components/product-detail/product-form';
+import {ProductMedia} from '~/components/product-detail/product-media';
 import {ProductPrice} from '~/components/product-detail/product-price';
 import {ProductResources} from '~/components/product-detail/product-resources';
+import {SpecCarousel} from '~/components/product-detail/spec-carousel';
+import {StickyBuyBar} from '~/components/product-detail/sticky-buy-bar';
 import {TechnicalSpecsSection} from '~/components/product-detail/technical-specs-section';
 import {getCollectionTrail} from '~/lib/breadcrumb-trail';
 import {PRODUCT_QUERY} from '~/lib/product-fragments';
+import {
+  getSelectedColorImage,
+  getSharedImages,
+  hasColorImagePartitioning,
+  toMedia,
+} from '~/lib/product-media';
 import specsCss from '~/styles/technical-specs.css?url';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {getLocaleFromRequest} from '~/lib/i18n';
 import {parseDelivery, parsePopularSearches, parseSpecs, parseTrustBadges} from '~/lib/product';
-import {ProductGallery} from '~/components/ProductGallery';
+import {loadCrossSell} from '~/lib/product-cross-sell';
+import {FrequentlyBoughtTogether} from '~/components/product-detail/frequently-bought-together';
+import {PairsWellWithSection} from '~/components/product-detail/pairs-well-with-section';
+import {RelatedProductsSection} from '~/components/product/related-products-section';
+
+const COPY = {
+  specsSubtitle: 'Full details in Technical Specifications below',
+};
 
 export const links = () => [{rel: 'stylesheet', href: specsCss}];
 
@@ -102,7 +117,8 @@ export async function loader(args: Route.LoaderArgs) {
 
   const productId = criticalData.product.id.split('/').pop() ?? '';
   const reviews = args.context.yotpo.getProductReviews(productId);
-  return {...deferredData, ...criticalData, reviews};
+  const crossSell = loadCrossSell(args.context.storefront, criticalData.product.handle);
+  return {...deferredData, ...criticalData, reviews, crossSell};
 }
 
 /**
@@ -187,6 +203,7 @@ export default function Product() {
     assemblyVideoUrl,
     trustBadges,
     specs,
+    crossSell,
     reviews,
   } = useLoaderData<typeof loader>();
 
@@ -209,17 +226,33 @@ export default function Product() {
     cMin.amount === cMax.amount;
   const hasOptions = productOptions.some((o) => o.optionValues.length > 1);
 
+  // Color products show the selected color's image first and hide the other colors' images.
+  const optionGroups = toOptionGroups(productOptions);
+  const {images, videos} = toMedia(product.media.nodes);
+  const partitioned = hasColorImagePartitioning(optionGroups);
+  const mediaImages = partitioned ? getSharedImages(images, optionGroups) : images;
+  const colorImage = partitioned
+    ? getSelectedColorImage(optionGroups, [
+        ...images,
+        ...(selectedVariant?.image ? [selectedVariant.image] : []),
+      ])
+    : undefined;
+  const variantName = selectedVariant?.selectedOptions
+    ?.map((o) => o.value)
+    .filter((v) => v !== 'Default Title')
+    .join(' / ');
+
   return (
     <Page className="pt-0">
       <Container className="bg-background pt-6 md:pt-8">
         <Sections>
           <Breadcrumbs items={breadcrumbs} className="pb-4 md:pb-6" />
           <div className="grid gap-ds-large lg:grid-cols-10 lg:items-start lg:gap-5">
-            <ProductGallery
-              key={selectedVariant?.id}
-              media={product.media.nodes}
+            <ProductMedia
+              images={mediaImages}
+              videos={videos}
+              colorImage={colorImage}
               title={title}
-              activeUrl={selectedVariant?.image?.url}
               className="lg:sticky lg:top-20 lg:col-span-6 lg:self-start"
             />
             <div className="grid gap-10 lg:col-span-4">
@@ -282,8 +315,8 @@ export default function Product() {
                   </FloatingBuyBlock>
                 </div>
               </div>
-              <TrustBadges badges={trustBadges} />
-              <SpecCarousel specs={specs} />
+              <ProductHighlights part="badges" badges={trustBadges} />
+              <SpecCarousel specs={specs} subtitle={COPY.specsSubtitle} />
             </div>
           </div>
 
@@ -298,6 +331,30 @@ export default function Product() {
             </div>
           ) : null}
 
+          {product.isGiftCard ? null : (
+            <Suspense fallback={null}>
+              <Await resolve={crossSell}>
+                {(data) => (
+                  <>
+                    {data.frequentlyBought.length > 0 && selectedVariant?.availableForSale ? (
+                      <FrequentlyBoughtTogether
+                        items={data.frequentlyBought}
+                        main={{
+                          imageUrl: selectedVariant.image?.url,
+                          price: selectedVariant.price,
+                          subtitle: variantName || undefined,
+                          title: product.title,
+                          variantId: selectedVariant.id,
+                        }}
+                      />
+                    ) : null}
+                    <RelatedProductsSection products={data.related} limit={4} />
+                    <PairsWellWithSection products={data.complementary} />
+                  </>
+                )}
+              </Await>
+            </Suspense>
+          )}
           <div id="reviews" className="scroll-mt-24">
             <Suspense fallback={<div className="min-h-64" aria-hidden />}>
               <Await resolve={reviews}>
@@ -318,12 +375,15 @@ export default function Product() {
         </Sections>
       </Container>
 
-      <StickyBuyBar
-        targetId="primary-buy-buttons"
-        title={product.title}
-        imageUrl={selectedVariant?.image?.url ?? product.featuredImage?.url}
-        price={selectedVariant?.price ? <Money data={selectedVariant.price} /> : null}
-      />
+      {product.isGiftCard ? null : (
+        <StickyBuyBar
+          targetId="primary-buy-buttons"
+          title={product.title}
+          variantName={variantName}
+          imageUrl={selectedVariant?.image?.url ?? product.featuredImage?.url}
+          price={selectedVariant?.price ? <Money data={selectedVariant.price} /> : null}
+        />
+      )}
       <Analytics.ProductView
         data={{
           products: [
