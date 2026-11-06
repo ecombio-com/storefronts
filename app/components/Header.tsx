@@ -19,11 +19,13 @@ import {NavHeightSync} from '~/components/nav/nav-height-sync';
 import {SearchModal} from '~/components/nav/search-modal';
 import {MobileMenu} from '~/components/nav/mobile-menu';
 import {Announcement} from '~/components/nav/announcement-bar';
+import type {AnnouncementBarData} from '~/lib/announcements';
 import {ZipCode} from '~/components/nav/zip-code';
 import {LocaleBar} from '~/components/nav/locale-bar';
 import {parseNavMenu, type MenuItem, type RawMenuItem} from '~/lib/menu';
 
 interface HeaderProps {
+  announcementBar: AnnouncementBarData | null;
   header: HeaderQuery;
   cart: Promise<CartApiQueryFragment | null>;
   isLoggedIn: Promise<boolean>;
@@ -51,7 +53,7 @@ const EXTRA_LINKS = [
 const SKIP_LINK =
   'sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-100 focus:rounded-ds-md focus:bg-background focus:px-ds-regular focus:py-2 focus:text-ds-regular focus:font-medium focus:shadow-ds-drop-md focus:ring-2 focus:ring-foreground focus:outline-none';
 
-export function Header({header, isLoggedIn, cart, publicStoreDomain}: HeaderProps) {
+export function Header({announcementBar, header, isLoggedIn, cart, publicStoreDomain}: HeaderProps) {
   const {shop, menu} = header;
   const parsed = parseNavMenu(
     (menu?.items ?? []) as unknown as RawMenuItem[],
@@ -70,7 +72,7 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}: HeaderProp
       >
         <NavScrollBehavior />
         <NavHeightSync />
-        <Announcement />
+        <Announcement bar={announcementBar} />
 
         {/* Tier 1: utility bar (desktop only) */}
         <div className="hidden md:block">

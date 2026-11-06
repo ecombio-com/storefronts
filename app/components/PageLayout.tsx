@@ -7,8 +7,10 @@ import {Aside} from '~/components/Aside';
 import {CartDrawer} from '~/components/cart/cart-drawer';
 import {Footer} from '~/components/Footer';
 import {Header} from '~/components/Header';
+import type {AnnouncementBarData} from '~/lib/announcements';
 
 interface PageLayoutProps {
+  announcementBar: AnnouncementBarData | null;
   cart: Promise<CartApiQueryFragment | null>;
   footer: Promise<FooterQuery | null>;
   header: HeaderQuery;
@@ -18,6 +20,7 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({
+  announcementBar,
   cart,
   children = null,
   footer,
@@ -30,6 +33,7 @@ export function PageLayout({
       <CartDrawer cart={cart} />
       {header && (
         <Header
+          announcementBar={announcementBar}
           header={header}
           cart={cart}
           isLoggedIn={isLoggedIn}

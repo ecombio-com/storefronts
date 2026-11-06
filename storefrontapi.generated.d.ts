@@ -3,6 +3,61 @@
 /* eslint-disable */
 import type * as StorefrontAPI from '@shopify/hydrogen/storefront-api-types';
 
+export type AnnouncementBarQueryVariables = StorefrontAPI.Exact<{
+  country?: StorefrontAPI.InputMaybe<StorefrontAPI.CountryCode>;
+  language?: StorefrontAPI.InputMaybe<StorefrontAPI.LanguageCode>;
+}>;
+
+export type AnnouncementBarQuery = {
+  metaobject?: StorefrontAPI.Maybe<{
+    enabled?: StorefrontAPI.Maybe<Pick<StorefrontAPI.MetaobjectField, 'value'>>;
+    autoRotate?: StorefrontAPI.Maybe<
+      Pick<StorefrontAPI.MetaobjectField, 'value'>
+    >;
+    intervalSeconds?: StorefrontAPI.Maybe<
+      Pick<StorefrontAPI.MetaobjectField, 'value'>
+    >;
+    dismissible?: StorefrontAPI.Maybe<
+      Pick<StorefrontAPI.MetaobjectField, 'value'>
+    >;
+    messages?: StorefrontAPI.Maybe<{
+      references?: StorefrontAPI.Maybe<{
+        nodes: Array<
+          Pick<StorefrontAPI.Metaobject, 'id'> & {
+            text?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            style?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            code?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            buttonLabel?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            link?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            startsAt?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            endsAt?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            showCountdown?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+            devices?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.MetaobjectField, 'value'>
+            >;
+          }
+        >;
+      }>;
+    }>;
+  }>;
+};
+
 export type JournalArticleFragment = Pick<
   StorefrontAPI.Article,
   'content' | 'excerpt' | 'handle' | 'publishedAt' | 'title' | 'tags'
@@ -2951,6 +3006,10 @@ export type PredictiveSearchQuery = {
 };
 
 interface GeneratedQueryTypes {
+  '#graphql\n  query AnnouncementBar($country: CountryCode, $language: LanguageCode)\n  @inContext(country: $country, language: $language) {\n    metaobject(handle: {type: "announcement_bar", handle: "main"}) {\n      enabled: field(key: "enabled") { value }\n      autoRotate: field(key: "auto_rotate") { value }\n      intervalSeconds: field(key: "interval_seconds") { value }\n      dismissible: field(key: "dismissible") { value }\n      messages: field(key: "messages") {\n        references(first: 10) {\n          nodes {\n            ... on Metaobject {\n              id\n              text: field(key: "text") { value }\n              style: field(key: "style") { value }\n              code: field(key: "code") { value }\n              buttonLabel: field(key: "button_label") { value }\n              link: field(key: "link") { value }\n              startsAt: field(key: "starts_at") { value }\n              endsAt: field(key: "ends_at") { value }\n              showCountdown: field(key: "show_countdown") { value }\n              devices: field(key: "devices") { value }\n            }\n          }\n        }\n      }\n    }\n  }\n': {
+    return: AnnouncementBarQuery;
+    variables: AnnouncementBarQueryVariables;
+  };
   '#graphql\n  query JournalBlogList($country: CountryCode, $language: LanguageCode)\n  @inContext(country: $country, language: $language) {\n    blogs(first: 25) {\n      nodes {\n        handle\n        title\n        parentBlog: metafield(namespace: "custom", key: "parent_blog") { value }\n      }\n    }\n  }\n': {
     return: JournalBlogListQuery;
     variables: JournalBlogListQueryVariables;

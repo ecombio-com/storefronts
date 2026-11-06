@@ -4,36 +4,22 @@ import {type ReactNode, useEffect, useState} from 'react';
 
 import {ChevronLeftIcon, ChevronRightIcon} from '~/components/ui/icons';
 import LocalizedLink from '~/components/ui/localized-link';
-import {
-  announcementConfig,
-  type AnnouncementItem,
-  type Countdown,
-  type Device,
-  type Variant,
-} from '~/lib/announcements';
+import type {AnnouncementBarData, Device, Variant} from '~/lib/announcements';
+
+// Button labels only. The messages come from Shopify (announcement_bar/main).
+const COPY = {
+  dismiss: 'Dismiss announcement',
+  next: 'Next announcement',
+  previous: 'Previous announcement',
+};
 
 const CLOSE_MS = 300;
 
 const VARIANTS: Record<Variant, string> = {
-  lime: 'bg-(--color-brand-primary) text-foreground',
-  lavender: 'bg-(--color-brand-secondary) text-foreground',
   dark: 'bg-primary text-primary-foreground',
+  lavender: 'bg-(--color-brand-secondary) text-foreground',
+  lime: 'bg-(--color-brand-primary) text-foreground',
 };
-
-function endTime(id: string, c: Countdown): number {
-  if (c.type === 'fixed') return new Date(c.ends).getTime();
-  const span = c.hours * 3600000;
-  try {
-    const key = `announcement-evergreen-${id}`;
-    const saved = Number(localStorage.getItem(key));
-    if (saved > Date.now()) return saved;
-    const end = Date.now() + span;
-    localStorage.setItem(key, String(end));
-    return end;
-  } catch {
-    return Date.now() + span;
-  }
-}
 
 function format(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -41,6 +27,12 @@ function format(ms: number): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   const clock = `${pad(Math.floor((s % 86400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
   return d > 0 ? `${d}d ${clock}` : clock;
+}
+
+function toTime(iso?: string): number | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? null : t;
 }
 
 function SmartLink({href, className, children}: {href: string; className?: string; children: ReactNode}) {
@@ -55,47 +47,22 @@ function SmartLink({href, className, children}: {href: string; className?: strin
   );
 }
 
-export function Announcement() {
-  if (!announcementConfig.enabled) return null;
-  const {campaignId, dismissible, autoRotate, intervalMs, labels, items} = announcementConfig;
-  return (
-    <AnnouncementBar
-      campaignId={campaignId}
-      dismissible={dismissible}
-      intervalMs={autoRotate ? intervalMs : 0}
-      labels={labels}
-      items={items}
-    />
-  );
+// Closing hides the bar until the next page load; nothing is saved.
+export function Announcement({bar}: {bar: AnnouncementBarData | null}) {
+  if (!bar) return null;
+  return <AnnouncementBar {...bar} />;
 }
 
-function AnnouncementBar({
-  campaignId,
-  items,
-  dismissible = true,
-  intervalMs = 6000,
-  labels,
-}: {
-  campaignId: string;
-  items: AnnouncementItem[];
-  dismissible?: boolean;
-  intervalMs?: number; // 0 turns auto-rotate off
-  labels: {dismiss: string; previous: string; next: string};
-}) {
+function AnnouncementBar({autoRotate, dismissible, intervalMs, items}: AnnouncementBarData) {
   const [phase, setPhase] = useState<'open' | 'closing' | 'gone'>('open');
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [ends, setEnds] = useState<Record<string, number>>({});
   const [now, setNow] = useState<number | null>(null);
   const [device, setDevice] = useState<Device | null>(null);
 
   useEffect(() => {
-    const e: Record<string, number> = {};
-    for (const i of items) if (i.countdown) e[i.id] = endTime(i.id, i.countdown);
-    setEnds(e);
     setNow(Date.now());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId]);
+  }, []);
 
   useEffect(() => {
     const tablet = window.matchMedia('(min-width: 768px) and (max-width: 1023px)');
@@ -110,27 +77,28 @@ function AnnouncementBar({
     };
   }, []);
 
-  const hasTimer = Object.keys(ends).length > 0;
+  const hasTimer = items.some((i) => i.countdownEnds);
   useEffect(() => {
     if (!hasTimer) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [hasTimer]);
 
-  // Items for other devices, or whose countdown has run out, are skipped.
+  // Messages for other devices, or whose countdown has run out, are skipped.
   const list = items.filter((i) => {
     if (i.devices && (device === null || !i.devices.includes(device))) return false;
-    const e = ends[i.id];
-    return !(i.countdown && now !== null && e !== undefined && e <= now);
+    const end = toTime(i.countdownEnds);
+    return !(end !== null && now !== null && end <= now);
   });
   const count = list.length;
+  const rotateMs = autoRotate ? intervalMs : 0;
 
   useEffect(() => {
-    if (count < 2 || paused || phase !== 'open' || intervalMs <= 0) return;
+    if (count < 2 || paused || phase !== 'open' || rotateMs <= 0) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const timer = setInterval(() => setIndex((i) => (i + 1) % count), intervalMs);
+    const timer = setInterval(() => setIndex((i) => (i + 1) % count), rotateMs);
     return () => clearInterval(timer);
-  }, [count, paused, phase, intervalMs]);
+  }, [count, paused, phase, rotateMs]);
 
   const current = list[index % Math.max(count, 1)];
   if (phase === 'gone' || !current) return null;
@@ -143,8 +111,8 @@ function AnnouncementBar({
 
   const underline = 'underline underline-offset-2';
   const arrowBtn = 'shrink-0 rounded-full p-0.5 hover:opacity-70';
-  const end = ends[current.id];
-  const remaining = current.countdown && now !== null && end !== undefined ? end - now : null;
+  const end = toTime(current.countdownEnds);
+  const remaining = end !== null && now !== null ? end - now : null;
 
   return (
     <div
@@ -158,7 +126,7 @@ function AnnouncementBar({
           className={cn(
             'relative flex items-center justify-center gap-2 py-2 pl-3 text-center text-ds-small transition-colors duration-500 md:py-2.5 md:text-ds-regular lg:py-2',
             dismissible ? 'pr-10' : 'pr-3',
-            VARIANTS[current.variant ?? 'lavender'],
+            VARIANTS[current.variant],
           )}
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
@@ -166,7 +134,7 @@ function AnnouncementBar({
           onBlur={() => setPaused(false)}
         >
           {count > 1 && (
-            <button type="button" onClick={() => go(-1)} aria-label={labels.previous} className={arrowBtn}>
+            <button type="button" onClick={() => go(-1)} aria-label={COPY.previous} className={arrowBtn}>
               <ChevronLeftIcon className="size-5" aria-hidden="true" />
             </button>
           )}
@@ -192,7 +160,7 @@ function AnnouncementBar({
             )}
           </p>
           {count > 1 && (
-            <button type="button" onClick={() => go(1)} aria-label={labels.next} className={arrowBtn}>
+            <button type="button" onClick={() => go(1)} aria-label={COPY.next} className={arrowBtn}>
               <ChevronRightIcon className="size-5" aria-hidden="true" />
             </button>
           )}
@@ -200,7 +168,7 @@ function AnnouncementBar({
             <button
               type="button"
               onClick={dismiss}
-              aria-label={labels.dismiss}
+              aria-label={COPY.dismiss}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 hover:opacity-70"
             >
               <X className="size-4" aria-hidden="true" />
