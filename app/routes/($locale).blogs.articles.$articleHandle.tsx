@@ -24,7 +24,7 @@ export const meta: Route.MetaFunction = ({data}) => {
   return [
     ...buildMeta({
       description: article.seo.description,
-      image: article.image?.url,
+      image: article.image?.url ?? new URL('/og-default.png', data.canonicalUrl).href,
       title: article.seo.title,
       type: 'article',
       url: data.canonicalUrl,
