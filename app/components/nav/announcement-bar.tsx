@@ -12,7 +12,6 @@ import {
   type Variant,
 } from '~/lib/announcements';
 
-const STORAGE_KEY = 'announcement-dismissed';
 const CLOSE_MS = 300;
 
 const VARIANTS: Record<Variant, string> = {
@@ -91,15 +90,6 @@ function AnnouncementBar({
   const [device, setDevice] = useState<Device | null>(null);
 
   useEffect(() => {
-    if (!dismissible) return;
-    try {
-      if (localStorage.getItem(STORAGE_KEY) === campaignId) setPhase('gone');
-    } catch {
-      /* storage unavailable */
-    }
-  }, [campaignId, dismissible]);
-
-  useEffect(() => {
     const e: Record<string, number> = {};
     for (const i of items) if (i.countdown) e[i.id] = endTime(i.id, i.countdown);
     setEnds(e);
@@ -147,11 +137,6 @@ function AnnouncementBar({
 
   const go = (delta: number) => setIndex((i) => (i + delta + count) % count);
   const dismiss = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, campaignId);
-    } catch {
-      /* storage unavailable */
-    }
     setPhase('closing');
     window.setTimeout(() => setPhase('gone'), CLOSE_MS);
   };

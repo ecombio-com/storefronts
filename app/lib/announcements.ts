@@ -17,45 +17,45 @@ export type AnnouncementItem = {
   devices?: Device[]; // omit to show on every device
 };
 
-// PLACEHOLDER COPY: replace the text, code and cta values before setting enabled to true.
+// Evergreen messages: each links to a page that returns 200. No prices, codes or deadlines.
+// To run a promo, add an item with code and/or countdown.
+// Closing the bar hides it until the next page load (nothing is saved).
 export const announcementConfig: {
   enabled: boolean;
-  campaignId: string; // bump to show the bar again to people who dismissed it
+  campaignId: string; // keys the countdown timers; change it when the campaign changes
   dismissible: boolean;
   autoRotate: boolean;
   intervalMs: number;
   labels: {dismiss: string; previous: string; next: string};
   items: AnnouncementItem[];
 } = {
-  enabled: false,
-  campaignId: 'announcement-2',
+  enabled: true,
+  campaignId: 'announcement-3',
   dismissible: true,
   autoRotate: true,
   intervalMs: 6000,
   labels: {dismiss: 'Dismiss announcement', previous: 'Previous announcement', next: 'Next announcement'},
   items: [
     {
-      id: 'tablet',
+      id: 'shop-all',
       variant: 'dark',
-      text: 'Placeholder: tablet-only message.',
-      cta: 'Shop now',
+      text: 'Shop e-bikes, e-scooters and electric skateboards in one place.',
+      cta: 'Shop all',
       href: '/collections/all',
-      devices: ['tablet'],
     },
     {
-      id: 'promo',
+      id: 'trade-in',
       variant: 'lavender',
-      text: 'Placeholder: promo message with code',
-      code: 'CODE',
-      href: '/collections/all',
+      text: 'Trade in your old ride toward a new one.',
+      cta: 'How trade-in works',
+      href: '/pages/trade-in',
     },
     {
-      id: 'sale',
+      id: 'guides',
       variant: 'lime',
-      text: 'Placeholder: sale ends in',
-      cta: 'Shop the sale',
-      href: '/collections/all',
-      countdown: {type: 'fixed', ends: '2026-12-31T23:59:00-08:00'},
+      text: 'Not sure which ride fits you? Read our buying guides.',
+      cta: 'Visit the Journal',
+      href: '/blogs',
     },
   ],
 };
