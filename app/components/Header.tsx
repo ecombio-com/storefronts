@@ -20,6 +20,7 @@ import {SearchModal} from '~/components/nav/search-modal';
 import {MobileMenu} from '~/components/nav/mobile-menu';
 import {Announcement} from '~/components/nav/announcement-bar';
 import {ZipCode} from '~/components/nav/zip-code';
+import {LocaleBar} from '~/components/nav/locale-bar';
 import {parseNavMenu, type MenuItem, type RawMenuItem} from '~/lib/menu';
 
 interface HeaderProps {
@@ -88,6 +89,7 @@ export function Header({header, isLoggedIn, cart, publicStoreDomain}: HeaderProp
             </ScrollFade>
             <div className="flex shrink-0 items-center gap-4">
               <ZipCode />
+              <LocaleBar />
             </div>
           </Container>
         </div>

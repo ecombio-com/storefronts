@@ -12,6 +12,7 @@ import {PersonIcon} from '~/components/ui/icons';
 import LocalizedLink from '~/components/ui/localized-link';
 import {useUrlLocale} from '~/components/ui/locale-context';
 import {Sheet, SheetContent, SheetTitle, SheetTrigger} from '~/components/ui/sheet';
+import {MobileLocale} from '~/components/nav/mobile-locale';
 import type {MenuItem} from '~/lib/menu';
 
 // All visible text in one place, ready to move into use-intl.
@@ -82,6 +83,9 @@ export function MobileMenu({
           <MobileMenuList items={items} onNavigate={close} />
         </nav>
         <MobileAccount isLoggedIn={isLoggedIn} onNavigate={close} />
+        <div className="px-5 pb-6">
+          <MobileLocale />
+        </div>
       </SheetContent>
     </Sheet>
   );
