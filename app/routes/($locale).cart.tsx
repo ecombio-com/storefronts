@@ -1,12 +1,19 @@
-import {useLoaderData, data, type HeadersFunction} from 'react-router';
+import {CartForm, useOptimisticCart, type CartQueryDataReturn} from '@shopify/hydrogen';
+import {cn} from 'cn';
+import {data, useLoaderData, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/($locale).cart';
-import type {CartQueryDataReturn} from '@shopify/hydrogen';
-import {CartForm} from '@shopify/hydrogen';
-import {CartMain} from '~/components/CartMain';
+import {CartPageLine} from '~/components/cart/cart-page-line';
+import {CartPageSummary} from '~/components/cart/cart-page-summary';
+import {COPY} from '~/components/cart/copy';
+import {buttonVariants} from '~/components/ui/button';
+import {Container} from '~/components/ui/container';
+import LocalizedLink from '~/components/ui/localized-link';
+import {Page} from '~/components/ui/page';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Cart`}];
-};
+export const meta: Route.MetaFunction = () => [
+  {title: 'Cart'},
+  {name: 'robots', content: 'noindex, nofollow'},
+];
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;
 
@@ -102,12 +109,49 @@ export async function loader({context}: Route.LoaderArgs) {
 }
 
 export default function Cart() {
-  const cart = useLoaderData<typeof loader>();
+  const original = useLoaderData<typeof loader>();
+  // Applies pending cart actions so the page updates before the server responds.
+  const cart = useOptimisticCart(original);
+  const lines = cart?.lines?.nodes ?? [];
+  const count = cart?.totalQuantity ?? 0;
+
+  if (!lines.length) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-5 px-5 py-10">
+        <h1 className="text-2xl sm:text-3xl">{COPY.empty}</h1>
+        <LocalizedLink href="/" className={cn(buttonVariants(), 'h-12 px-8')}>
+          {COPY.continueShopping}
+        </LocalizedLink>
+      </div>
+    );
+  }
 
   return (
-    <div className="cart">
-      <h1>Cart</h1>
-      <CartMain layout="page" cart={cart} />
-    </div>
+    <Page className="bg-muted pb-10">
+      <Container>
+        <div className="grid gap-5">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl">Your cart</h1>
+            <span className="flex size-7 items-center justify-center rounded-full bg-foreground text-ds-regular text-background">
+              {count}
+            </span>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-12">
+            <div className="lg:col-span-8 xl:col-span-9">
+              <ul className="grid gap-5" aria-label={COPY.items}>
+                {lines.map((line) => (
+                  <CartPageLine key={line.id} line={line} />
+                ))}
+              </ul>
+            </div>
+            <aside className="lg:col-span-4 xl:col-span-3" aria-label="Order summary">
+              <div className="lg:sticky lg:top-20">
+                <CartPageSummary cart={cart} />
+              </div>
+            </aside>
+          </div>
+        </div>
+      </Container>
+    </Page>
   );
 }
