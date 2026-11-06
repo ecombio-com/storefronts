@@ -2438,6 +2438,126 @@ export type ProductQuery = {
   >;
 };
 
+export type AlgoliaProductsByIdsQueryVariables = StorefrontAPI.Exact<{
+  ids:
+    | Array<StorefrontAPI.Scalars['ID']['input']>
+    | StorefrontAPI.Scalars['ID']['input'];
+  country?: StorefrontAPI.InputMaybe<StorefrontAPI.CountryCode>;
+  language?: StorefrontAPI.InputMaybe<StorefrontAPI.LanguageCode>;
+}>;
+
+export type AlgoliaProductsByIdsQuery = {
+  nodes: Array<
+    StorefrontAPI.Maybe<
+      | {
+          __typename:
+            | 'AppliedGiftCard'
+            | 'Article'
+            | 'Blog'
+            | 'Cart'
+            | 'CartLine'
+            | 'Collection'
+            | 'Comment'
+            | 'Company'
+            | 'CompanyContact'
+            | 'CompanyLocation'
+            | 'ComponentizableCartLine'
+            | 'ExternalVideo'
+            | 'GenericFile'
+            | 'Location'
+            | 'MailingAddress'
+            | 'Market'
+            | 'MediaImage'
+            | 'MediaPresentation'
+            | 'Menu'
+            | 'MenuItem';
+        }
+      | {
+          __typename:
+            | 'Metafield'
+            | 'Metaobject'
+            | 'Model3d'
+            | 'Order'
+            | 'Page'
+            | 'ProductOption'
+            | 'ProductOptionValue'
+            | 'ProductVariant'
+            | 'Shop'
+            | 'ShopPayInstallmentsFinancingPlan'
+            | 'ShopPayInstallmentsFinancingPlanTerm'
+            | 'ShopPayInstallmentsProductVariantPricing'
+            | 'ShopPolicy'
+            | 'TaxonomyCategory'
+            | 'UrlRedirect'
+            | 'Video';
+        }
+      | ({__typename: 'Product'} & Pick<
+          StorefrontAPI.Product,
+          'id' | 'handle' | 'title' | 'vendor' | 'tags' | 'availableForSale'
+        > & {
+            featuredImage?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Image, 'url' | 'altText' | 'width' | 'height'>
+            >;
+            priceRange: {
+              minVariantPrice: Pick<
+                StorefrontAPI.MoneyV2,
+                'amount' | 'currencyCode'
+              >;
+              maxVariantPrice: Pick<
+                StorefrontAPI.MoneyV2,
+                'amount' | 'currencyCode'
+              >;
+            };
+            compareAtPriceRange: {
+              minVariantPrice: Pick<
+                StorefrontAPI.MoneyV2,
+                'amount' | 'currencyCode'
+              >;
+            };
+            cardBadge?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Metafield, 'value'>
+            >;
+            cardSpecsText?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Metafield, 'value'>
+            >;
+            cardSpecs?: StorefrontAPI.Maybe<{
+              references?: StorefrontAPI.Maybe<{
+                nodes: Array<{
+                  fields: Array<
+                    Pick<StorefrontAPI.MetaobjectField, 'key' | 'value'>
+                  >;
+                }>;
+              }>;
+            }>;
+            selectedOrFirstAvailableVariant?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.ProductVariant, 'id' | 'availableForSale'> & {
+                selectedOptions: Array<
+                  Pick<StorefrontAPI.SelectedOption, 'name' | 'value'>
+                >;
+              }
+            >;
+            options: Array<
+              Pick<StorefrontAPI.ProductOption, 'name'> & {
+                optionValues: Array<
+                  Pick<StorefrontAPI.ProductOptionValue, 'name'> & {
+                    swatch?: StorefrontAPI.Maybe<
+                      Pick<StorefrontAPI.ProductOptionValueSwatch, 'color'> & {
+                        image?: StorefrontAPI.Maybe<{
+                          previewImage?: StorefrontAPI.Maybe<
+                            Pick<StorefrontAPI.Image, 'url'>
+                          >;
+                        }>;
+                      }
+                    >;
+                  }
+                >;
+              }
+            >;
+          })
+    >
+  >;
+};
+
 export type YotpoReviewProductQueryVariables = StorefrontAPI.Exact<{
   handle: StorefrontAPI.Scalars['String']['input'];
   country?: StorefrontAPI.InputMaybe<StorefrontAPI.CountryCode>;
@@ -2787,6 +2907,164 @@ export type PoliciesQuery = {
   };
 };
 
+export type SearchFilterFieldsFragment = Pick<
+  StorefrontAPI.Filter,
+  'id' | 'label' | 'type' | 'presentation'
+> & {
+  values: Array<
+    Pick<StorefrontAPI.FilterValue, 'id' | 'label' | 'count' | 'input'> & {
+      swatch?: StorefrontAPI.Maybe<
+        Pick<StorefrontAPI.Swatch, 'color'> & {
+          image?: StorefrontAPI.Maybe<{
+            previewImage?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Image, 'url'>
+            >;
+          }>;
+        }
+      >;
+    }
+  >;
+};
+
+export type SearchBrowseQueryVariables = StorefrontAPI.Exact<{
+  query: StorefrontAPI.Scalars['String']['input'];
+  first: StorefrontAPI.Scalars['Int']['input'];
+  after?: StorefrontAPI.InputMaybe<StorefrontAPI.Scalars['String']['input']>;
+  productFilters?: StorefrontAPI.InputMaybe<
+    Array<StorefrontAPI.ProductFilter> | StorefrontAPI.ProductFilter
+  >;
+  sortKey?: StorefrontAPI.InputMaybe<StorefrontAPI.SearchSortKeys>;
+  reverse?: StorefrontAPI.InputMaybe<StorefrontAPI.Scalars['Boolean']['input']>;
+  country?: StorefrontAPI.InputMaybe<StorefrontAPI.CountryCode>;
+  language?: StorefrontAPI.InputMaybe<StorefrontAPI.LanguageCode>;
+}>;
+
+export type SearchBrowseQuery = {
+  search: Pick<StorefrontAPI.SearchResultItemConnection, 'totalCount'> & {
+    nodes: Array<
+      | {__typename: 'Article' | 'Page'}
+      | ({__typename: 'Product'} & Pick<
+          StorefrontAPI.Product,
+          'id' | 'handle' | 'title' | 'vendor' | 'tags' | 'availableForSale'
+        > & {
+            featuredImage?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Image, 'url' | 'altText' | 'width' | 'height'>
+            >;
+            priceRange: {
+              minVariantPrice: Pick<
+                StorefrontAPI.MoneyV2,
+                'amount' | 'currencyCode'
+              >;
+              maxVariantPrice: Pick<
+                StorefrontAPI.MoneyV2,
+                'amount' | 'currencyCode'
+              >;
+            };
+            compareAtPriceRange: {
+              minVariantPrice: Pick<
+                StorefrontAPI.MoneyV2,
+                'amount' | 'currencyCode'
+              >;
+            };
+            cardBadge?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Metafield, 'value'>
+            >;
+            cardSpecsText?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Metafield, 'value'>
+            >;
+            cardSpecs?: StorefrontAPI.Maybe<{
+              references?: StorefrontAPI.Maybe<{
+                nodes: Array<{
+                  fields: Array<
+                    Pick<StorefrontAPI.MetaobjectField, 'key' | 'value'>
+                  >;
+                }>;
+              }>;
+            }>;
+            selectedOrFirstAvailableVariant?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.ProductVariant, 'id' | 'availableForSale'> & {
+                selectedOptions: Array<
+                  Pick<StorefrontAPI.SelectedOption, 'name' | 'value'>
+                >;
+              }
+            >;
+            options: Array<
+              Pick<StorefrontAPI.ProductOption, 'name'> & {
+                optionValues: Array<
+                  Pick<StorefrontAPI.ProductOptionValue, 'name'> & {
+                    swatch?: StorefrontAPI.Maybe<
+                      Pick<StorefrontAPI.ProductOptionValueSwatch, 'color'> & {
+                        image?: StorefrontAPI.Maybe<{
+                          previewImage?: StorefrontAPI.Maybe<
+                            Pick<StorefrontAPI.Image, 'url'>
+                          >;
+                        }>;
+                      }
+                    >;
+                  }
+                >;
+              }
+            >;
+          })
+    >;
+    pageInfo: Pick<StorefrontAPI.PageInfo, 'hasNextPage' | 'endCursor'>;
+    productFilters: Array<
+      Pick<StorefrontAPI.Filter, 'id' | 'label' | 'type' | 'presentation'> & {
+        values: Array<
+          Pick<
+            StorefrontAPI.FilterValue,
+            'id' | 'label' | 'count' | 'input'
+          > & {
+            swatch?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Swatch, 'color'> & {
+                image?: StorefrontAPI.Maybe<{
+                  previewImage?: StorefrontAPI.Maybe<
+                    Pick<StorefrontAPI.Image, 'url'>
+                  >;
+                }>;
+              }
+            >;
+          }
+        >;
+      }
+    >;
+  };
+};
+
+export type SearchFacetsQueryVariables = StorefrontAPI.Exact<{
+  query: StorefrontAPI.Scalars['String']['input'];
+  productFilters?: StorefrontAPI.InputMaybe<
+    Array<StorefrontAPI.ProductFilter> | StorefrontAPI.ProductFilter
+  >;
+  country?: StorefrontAPI.InputMaybe<StorefrontAPI.CountryCode>;
+  language?: StorefrontAPI.InputMaybe<StorefrontAPI.LanguageCode>;
+}>;
+
+export type SearchFacetsQuery = {
+  search: Pick<StorefrontAPI.SearchResultItemConnection, 'totalCount'> & {
+    productFilters: Array<
+      Pick<StorefrontAPI.Filter, 'id' | 'label' | 'type' | 'presentation'> & {
+        values: Array<
+          Pick<
+            StorefrontAPI.FilterValue,
+            'id' | 'label' | 'count' | 'input'
+          > & {
+            swatch?: StorefrontAPI.Maybe<
+              Pick<StorefrontAPI.Swatch, 'color'> & {
+                image?: StorefrontAPI.Maybe<{
+                  previewImage?: StorefrontAPI.Maybe<
+                    Pick<StorefrontAPI.Image, 'url'>
+                  >;
+                }>;
+              }
+            >;
+          }
+        >;
+      }
+    >;
+  };
+};
+
 export type SearchProductFragment = {__typename: 'Product'} & Pick<
   StorefrontAPI.Product,
   'handle' | 'id' | 'publishedAt' | 'title' | 'trackingParameters' | 'vendor'
@@ -3114,6 +3392,10 @@ interface GeneratedQueryTypes {
     return: ProductQuery;
     variables: ProductQueryVariables;
   };
+  '#graphql\n  query AlgoliaProductsByIds(\n    $ids: [ID!]!\n    $country: CountryCode\n    $language: LanguageCode\n  ) @inContext(country: $country, language: $language) {\n    nodes(ids: $ids) {\n      __typename\n      ... on Product {\n        ...ProductCardItem\n      }\n    }\n  }\n  #graphql\n  fragment ProductCardItem on Product {\n    id\n    handle\n    title\n    vendor\n    tags\n    availableForSale\n    featuredImage {\n      url\n      altText\n      width\n      height\n    }\n    priceRange {\n      minVariantPrice { amount currencyCode }\n      maxVariantPrice { amount currencyCode }\n    }\n    compareAtPriceRange {\n      minVariantPrice { amount currencyCode }\n    }\n    cardBadge: metafield(namespace: "custom", key: "card_badge") {\n      value\n    }\n    cardSpecsText: metafield(namespace: "custom", key: "card_specs") {\n      value\n    }\n    cardSpecs: metafield(namespace: "custom", key: "product_specs") {\n      references(first: 4) {\n        nodes {\n          ... on Metaobject {\n            fields {\n              key\n              value\n            }\n          }\n        }\n      }\n    }\n    selectedOrFirstAvailableVariant {\n      id\n      availableForSale\n      selectedOptions { name value }\n    }\n    options {\n      name\n      optionValues {\n        name\n        swatch {\n          color\n          image { previewImage { url } }\n        }\n      }\n    }\n  }\n\n': {
+    return: AlgoliaProductsByIdsQuery;
+    variables: AlgoliaProductsByIdsQueryVariables;
+  };
   '#graphql\n  query YotpoReviewProduct(\n    $handle: String!\n    $country: CountryCode\n    $language: LanguageCode\n  ) @inContext(country: $country, language: $language) {\n    product(handle: $handle) {\n      id\n      handle\n      title\n      featuredImage {\n        url\n      }\n    }\n  }\n': {
     return: YotpoReviewProductQuery;
     variables: YotpoReviewProductQueryVariables;
@@ -3141,6 +3423,14 @@ interface GeneratedQueryTypes {
   '#graphql\n  fragment PolicyItem on ShopPolicy {\n    id\n    title\n    handle\n  }\n  query Policies ($country: CountryCode, $language: LanguageCode)\n    @inContext(country: $country, language: $language) {\n    shop {\n      privacyPolicy {\n        ...PolicyItem\n      }\n      shippingPolicy {\n        ...PolicyItem\n      }\n      termsOfService {\n        ...PolicyItem\n      }\n      refundPolicy {\n        ...PolicyItem\n      }\n      subscriptionPolicy {\n        id\n        title\n        handle\n      }\n    }\n  }\n': {
     return: PoliciesQuery;
     variables: PoliciesQueryVariables;
+  };
+  '#graphql\n  query SearchBrowse(\n    $query: String!\n    $first: Int!\n    $after: String\n    $productFilters: [ProductFilter!]\n    $sortKey: SearchSortKeys\n    $reverse: Boolean\n    $country: CountryCode\n    $language: LanguageCode\n  ) @inContext(country: $country, language: $language) {\n    search(\n      query: $query\n      first: $first\n      after: $after\n      productFilters: $productFilters\n      sortKey: $sortKey\n      reverse: $reverse\n      types: PRODUCT\n    ) {\n      totalCount\n      nodes {\n        __typename\n        ... on Product {\n          ...ProductCardItem\n        }\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n      }\n      productFilters {\n        ...SearchFilterFields\n      }\n    }\n  }\n  #graphql\n  fragment ProductCardItem on Product {\n    id\n    handle\n    title\n    vendor\n    tags\n    availableForSale\n    featuredImage {\n      url\n      altText\n      width\n      height\n    }\n    priceRange {\n      minVariantPrice { amount currencyCode }\n      maxVariantPrice { amount currencyCode }\n    }\n    compareAtPriceRange {\n      minVariantPrice { amount currencyCode }\n    }\n    cardBadge: metafield(namespace: "custom", key: "card_badge") {\n      value\n    }\n    cardSpecsText: metafield(namespace: "custom", key: "card_specs") {\n      value\n    }\n    cardSpecs: metafield(namespace: "custom", key: "product_specs") {\n      references(first: 4) {\n        nodes {\n          ... on Metaobject {\n            fields {\n              key\n              value\n            }\n          }\n        }\n      }\n    }\n    selectedOrFirstAvailableVariant {\n      id\n      availableForSale\n      selectedOptions { name value }\n    }\n    options {\n      name\n      optionValues {\n        name\n        swatch {\n          color\n          image { previewImage { url } }\n        }\n      }\n    }\n  }\n\n  #graphql\n  fragment SearchFilterFields on Filter {\n    id\n    label\n    type\n    presentation\n    values {\n      id\n      label\n      count\n      input\n      swatch {\n        color\n        image {\n          previewImage {\n            url\n          }\n        }\n      }\n    }\n  }\n\n': {
+    return: SearchBrowseQuery;
+    variables: SearchBrowseQueryVariables;
+  };
+  '#graphql\n  query SearchFacets(\n    $query: String!\n    $productFilters: [ProductFilter!]\n    $country: CountryCode\n    $language: LanguageCode\n  ) @inContext(country: $country, language: $language) {\n    search(\n      query: $query\n      first: 1\n      productFilters: $productFilters\n      types: PRODUCT\n    ) {\n      totalCount\n      productFilters {\n        ...SearchFilterFields\n      }\n    }\n  }\n  #graphql\n  fragment SearchFilterFields on Filter {\n    id\n    label\n    type\n    presentation\n    values {\n      id\n      label\n      count\n      input\n      swatch {\n        color\n        image {\n          previewImage {\n            url\n          }\n        }\n      }\n    }\n  }\n\n': {
+    return: SearchFacetsQuery;
+    variables: SearchFacetsQueryVariables;
   };
   '#graphql\n  query RegularSearch(\n    $country: CountryCode\n    $endCursor: String\n    $first: Int\n    $language: LanguageCode\n    $last: Int\n    $term: String!\n    $startCursor: String\n  ) @inContext(country: $country, language: $language) {\n    articles: search(\n      query: $term,\n      types: [ARTICLE],\n      first: $first,\n    ) {\n      nodes {\n        ...on Article {\n          ...SearchArticle\n        }\n      }\n    }\n    pages: search(\n      query: $term,\n      types: [PAGE],\n      first: $first,\n    ) {\n      nodes {\n        ...on Page {\n          ...SearchPage\n        }\n      }\n    }\n    products: search(\n      after: $endCursor,\n      before: $startCursor,\n      first: $first,\n      last: $last,\n      query: $term,\n      sortKey: RELEVANCE,\n      types: [PRODUCT],\n      unavailableProducts: HIDE,\n    ) {\n      nodes {\n        ...on Product {\n          ...SearchProduct\n        }\n      }\n      pageInfo {\n        ...PageInfoFragment\n      }\n    }\n  }\n  #graphql\n  fragment SearchProduct on Product {\n    __typename\n    handle\n    id\n    publishedAt\n    title\n    trackingParameters\n    vendor\n    selectedOrFirstAvailableVariant(\n      selectedOptions: []\n      ignoreUnknownOptions: true\n      caseInsensitiveMatch: true\n    ) {\n      id\n      image {\n        url\n        altText\n        width\n        height\n      }\n      price {\n        amount\n        currencyCode\n      }\n      compareAtPrice {\n        amount\n        currencyCode\n      }\n      selectedOptions {\n        name\n        value\n      }\n      product {\n        handle\n        title\n      }\n    }\n  }\n\n  #graphql\n  fragment SearchPage on Page {\n     __typename\n     handle\n    id\n    title\n    trackingParameters\n  }\n\n  #graphql\n  fragment SearchArticle on Article {\n    __typename\n    handle\n    id\n    title\n    trackingParameters\n  }\n\n  #graphql\n  fragment PageInfoFragment on PageInfo {\n    hasNextPage\n    hasPreviousPage\n    startCursor\n    endCursor\n  }\n\n': {
     return: RegularSearchQuery;

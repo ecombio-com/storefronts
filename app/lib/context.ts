@@ -1,4 +1,5 @@
 import {createHydrogenContext} from '@shopify/hydrogen';
+import {createAlgoliaDeps, type AlgoliaDeps} from '~/@algolia/client.server';
 import {AppSession} from '~/lib/session';
 import {CART_QUERY_FRAGMENT} from '~/lib/fragments';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
@@ -15,7 +16,10 @@ const additionalContext = {
 } as const;
 
 // Automatically augment HydrogenAdditionalContext with the additional context type
-type AdditionalContextType = typeof additionalContext & {yotpo: YotpoClient};
+type AdditionalContextType = typeof additionalContext & {
+  yotpo: YotpoClient;
+  algolia: AlgoliaDeps;
+};
 
 declare global {
   interface HydrogenAdditionalContext extends AdditionalContextType {}
@@ -48,6 +52,7 @@ export async function createHydrogenRouterContext(
   ]);
 
   const yotpo = createYotpoClient({env, cache, waitUntil, request});
+  const algolia = createAlgoliaDeps({env, cache, waitUntil, request});
 
   const hydrogenContext = createHydrogenContext(
     {
@@ -62,7 +67,7 @@ export async function createHydrogenRouterContext(
         queryFragment: CART_QUERY_FRAGMENT,
       },
     },
-    {...additionalContext, yotpo},
+    {...additionalContext, yotpo, algolia},
   );
 
   return hydrogenContext;

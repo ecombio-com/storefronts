@@ -11,9 +11,13 @@ type PageInfo = {hasNextPage: boolean; endCursor?: string | null};
 export function InfiniteProductGrid({
   initialPageInfo,
   initialProducts,
+  showSale = false,
+  variant = 'minimal',
 }: {
   initialPageInfo: PageInfo;
   initialProducts: ProductCardData[];
+  showSale?: boolean;
+  variant?: 'default' | 'minimal';
 }) {
   const fetcher = useFetcher<{pageInfo: PageInfo; products: ProductCardData[]}>();
   const location = useLocation();
@@ -55,8 +59,8 @@ export function InfiniteProductGrid({
           <ProductCard
             key={product.id}
             product={product}
-            variant="minimal"
-            showSale={false}
+            variant={variant}
+            showSale={showSale}
             loading={index < 6 ? 'eager' : undefined}
           />
         ))}

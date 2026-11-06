@@ -1,82 +1,382 @@
-import {useLoaderData} from 'react-router';
-import type {Route} from './+types/($locale).search';
-import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
-import {SearchForm} from '~/components/SearchForm';
-import {SearchResults} from '~/components/SearchResults';
-import {
-  type RegularSearchReturn,
-  type PredictiveSearchReturn,
-  getEmptyPredictiveSearchResult,
-} from '~/lib/search';
+import {Analytics, getPaginationVariables} from '@shopify/hydrogen';
+import {cn} from 'cn';
+import {useLoaderData, useLocation, useNavigation} from 'react-router';
 import type {
-  RegularSearchQuery,
   PredictiveSearchQuery,
+  RegularSearchQuery,
 } from 'storefrontapi.generated';
+import type {Route} from './+types/($locale).search';
+import {
+  isAlgoliaReady,
+  toPublicAlgoliaConfig,
+  TrackSearchClicks,
+  type PublicAlgoliaConfig,
+} from '~/@algolia';
+import {FilterSheet, FilterSidebar} from '~/components/collections/filter-sidebar';
+import {InfiniteProductGrid} from '~/components/collections/infinite-product-grid';
+import {SortSelect} from '~/components/collections/sort-select';
+import type {ProductCardData} from '~/components/product-card/types';
+import {Container} from '~/components/ui/container';
+import {Page} from '~/components/ui/page';
+import {Sections} from '~/components/ui/sections';
+import {
+  PRODUCTS_PER_PAGE,
+  SEARCH_SORT_EXCLUDE,
+  parseBrowseParams,
+  parseSortBy,
+} from '~/lib/collection-browse';
+import {
+  transformShopifyFilters,
+  type Filter,
+  type PriceRange,
+} from '~/lib/collection-filters';
+import {PRODUCT_CARD_FRAGMENT, toProductCardData} from '~/lib/product-card';
+import {
+  getEmptyPredictiveSearchResult,
+  type PredictiveSearchReturn,
+  type RegularSearchReturn,
+} from '~/lib/search';
+import {parseAlgoliaCursor, searchViaAlgolia} from '~/lib/search-algolia.server';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Search`}];
+export const meta: Route.MetaFunction = ({data}) => {
+  const term = data?.type === 'browse' ? data.term : '';
+  return [
+    {title: term ? `Search results for "${term}"` : 'Search'},
+    {
+      name: 'description',
+      content: term
+        ? `Find products matching "${term}"`
+        : 'Search for products in our store',
+    },
+    {name: 'robots', content: 'noindex, nofollow'},
+  ];
+};
+
+type BrowseSearchData = {
+  type: 'browse';
+  term: string;
+  total: number;
+  products: ProductCardData[];
+  pageInfo: {hasNextPage: boolean; endCursor: string | null};
+  filters: Filter[];
+  priceRange?: PriceRange;
+  tracking: {
+    config: PublicAlgoliaConfig;
+    queryID?: string;
+    firstPageCount: number;
+  } | null;
 };
 
 export async function loader({request, context}: Route.LoaderArgs) {
   const url = new URL(request.url);
-  const isPredictive = url.searchParams.has('predictive');
-  const searchPromise: Promise<PredictiveSearchReturn | RegularSearchReturn> =
-    isPredictive
-      ? predictiveSearch({request, context})
-      : regularSearch({request, context});
-
-  searchPromise.catch((error: Error) => {
-    console.error(error);
-    return {term: '', result: null, error: error.message};
-  });
-
-  return await searchPromise;
+  // The header search modal loads this route with ?predictive=true.
+  if (url.searchParams.has('predictive')) {
+    return predictiveSearch({request, context});
+  }
+  return browseSearch({request, context});
 }
 
-/**
- * Renders the /search route
- */
+function escapeQuery(value: string) {
+  return value.replace(/'/g, "\\'");
+}
+
+// Same rule as Next: text AND collection scope, "*" when there is neither.
+function buildSearchQuery(term: string, collection?: string): string {
+  const parts: string[] = [];
+  if (term) parts.push(term);
+  if (collection) parts.push(`collection:'${escapeQuery(collection)}'`);
+  return parts.length > 0 ? parts.join(' AND ') : '*';
+}
+
+// Storefront search sorts by RELEVANCE or PRICE only.
+function toSearchSort(sortBy?: string | null) {
+  const {sortKey, reverse} = parseSortBy(sortBy);
+  return sortKey === 'PRICE'
+    ? {sortKey: 'PRICE' as const, reverse}
+    : {sortKey: 'RELEVANCE' as const, reverse: false};
+}
+
+async function browseSearch({
+  request,
+  context,
+}: Pick<Route.LoaderArgs, 'request' | 'context'>): Promise<BrowseSearchData> {
+  const {storefront, algolia} = context;
+  const url = new URL(request.url);
+  const term = (url.searchParams.get('q') ?? '').trim();
+  const collection = url.searchParams.get('collection') || undefined;
+  const cursor = url.searchParams.get('cursor') || undefined;
+  const {filters, sortBy} = parseBrowseParams(url.searchParams);
+  const query = buildSearchQuery(term, collection);
+  const productFilters = filters.length > 0 ? filters : undefined;
+  // null = a Shopify cursor, 0 = first page, N = an "algolia:N" cursor.
+  const algoliaPage = cursor ? parseAlgoliaCursor(cursor) : 0;
+  const empty: BrowseSearchData = {
+    type: 'browse',
+    term,
+    total: 0,
+    products: [],
+    pageInfo: {hasNextPage: false, endCursor: null},
+    filters: [],
+    priceRange: undefined,
+    tracking: null,
+  };
+
+  // Algolia ranks plain text searches (no filters applied). Anything else, or any failure,
+  // runs the Shopify search below. The filter sidebar always comes from Shopify facets.
+  const useAlgolia =
+    isAlgoliaReady(algolia.config) &&
+    term !== '' &&
+    filters.length === 0 &&
+    algoliaPage !== null;
+  if (useAlgolia) {
+    const [ranked, facets] = await Promise.all([
+      searchViaAlgolia(algolia, storefront, {
+        collection,
+        hitsPerPage: PRODUCTS_PER_PAGE,
+        page: algoliaPage ?? 0,
+        query: term,
+        sortBy,
+      }),
+      cursor
+        ? null
+        : storefront.query(SEARCH_FACETS_QUERY, {
+            variables: {query, productFilters},
+          }),
+    ]);
+    if (ranked) {
+      const transformed = facets
+        ? transformShopifyFilters(facets.search.productFilters, {
+            activeFilters: filters,
+            currencyCode: ranked.products[0]?.price.currencyCode,
+          })
+        : {filters: [] as Filter[], priceRange: undefined};
+      const config = toPublicAlgoliaConfig(algolia.config);
+      return {
+        ...empty,
+        total: ranked.total,
+        products: ranked.products,
+        pageInfo: {
+          hasNextPage: ranked.pageInfo.hasNextPage,
+          endCursor: ranked.pageInfo.endCursor,
+        },
+        filters: transformed.filters,
+        priceRange: transformed.priceRange,
+        tracking: config
+          ? {
+              config,
+              queryID: ranked.queryID,
+              firstPageCount: ranked.products.length,
+            }
+          : null,
+      };
+    }
+  }
+
+  // An "algolia:N" cursor can't be continued on Shopify.
+  if (cursor && algoliaPage !== null) return empty;
+
+  const {reverse, sortKey} = toSearchSort(sortBy);
+  const {search} = await storefront.query(SEARCH_BROWSE_QUERY, {
+    variables: {
+      query,
+      first: PRODUCTS_PER_PAGE,
+      after: cursor,
+      productFilters,
+      sortKey,
+      reverse,
+    },
+  });
+  const products = search.nodes.flatMap((node) =>
+    node.__typename === 'Product' ? [toProductCardData(node)] : [],
+  );
+  const transformed = transformShopifyFilters(search.productFilters, {
+    activeFilters: filters,
+    currencyCode: products[0]?.price.currencyCode,
+  });
+  return {
+    ...empty,
+    total: search.totalCount,
+    products,
+    pageInfo: {
+      hasNextPage: search.pageInfo.hasNextPage,
+      endCursor: search.pageInfo.endCursor ?? null,
+    },
+    filters: transformed.filters,
+    priceRange: transformed.priceRange,
+  };
+}
+
 export default function SearchPage() {
-  const {type, term, result, error} = useLoaderData<typeof loader>();
-  if (type === 'predictive') return null;
+  const data = useLoaderData<typeof loader>();
+  const location = useLocation();
+  const navigation = useNavigation();
+  if (data.type === 'predictive') return null;
+
+  const {filters, pageInfo, priceRange, products, term, total, tracking} = data;
+  const pending =
+    navigation.state === 'loading' &&
+    navigation.location?.pathname === location.pathname;
+  const activeCount = parseBrowseParams(location.search).filters.length;
+  const countLabel = `${total.toLocaleString('en-US')} ${total === 1 ? 'Item' : 'Items'}`;
 
   return (
-    <div className="search">
-      <h1>Search</h1>
-      <SearchForm>
-        {({inputRef}) => (
-          <>
-            <input
-              defaultValue={term}
-              name="q"
-              placeholder="Search…"
-              ref={inputRef}
-              type="search"
-            />
-            &nbsp;
-            <button type="submit">Search</button>
-          </>
-        )}
-      </SearchForm>
-      {error && <p style={{color: 'red'}}>{error}</p>}
-      {!term || !result?.total ? (
-        <SearchResults.Empty />
-      ) : (
-        <SearchResults result={result} term={term}>
-          {({articles, pages, products, term}) => (
-            <div>
-              <SearchResults.Products products={products} term={term} />
-              <SearchResults.Pages pages={pages} term={term} />
-              <SearchResults.Articles articles={articles} term={term} />
+    <Page className="pt-2.5 pb-10 md:pt-10">
+      <Container>
+        <Sections className="gap-5">
+          <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl md:text-[56px] md:leading-[1.14]">
+            Search{term ? ` for "${term}"` : ''}
+          </h1>
+
+          <div className="flex flex-col gap-5">
+            <div className="sticky top-[calc(var(--header-offset,0px)_+_0.75rem)] z-20 flex items-center gap-3 rounded-2xl border border-border-subtle bg-card px-4 py-3 [transition:var(--header-offset-transition,none)] sm:gap-5">
+              <div className="lg:hidden">
+                <FilterSheet count={activeCount}>
+                  <FilterSidebar filters={filters} priceRange={priceRange} />
+                </FilterSheet>
+              </div>
+              <div className="ml-auto flex min-w-0 items-center gap-3 sm:gap-5">
+                {total > 0 ? (
+                  <span className="hidden text-ds-regular text-muted-foreground sm:block">
+                    {countLabel}
+                  </span>
+                ) : null}
+                <SortSelect exclude={SEARCH_SORT_EXCLUDE} />
+              </div>
             </div>
-          )}
-        </SearchResults>
-      )}
-      <Analytics.SearchView data={{searchTerm: term, searchResults: result}} />
-    </div>
+
+            <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-10">
+              <aside className="hidden rounded-2xl border border-border-subtle bg-card p-4 lg:sticky lg:top-[calc(var(--header-offset,0px)_+_5.25rem)] lg:block lg:max-h-[calc(100vh_-_var(--header-offset,0px)_-_5.5rem)] lg:self-start lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
+                <FilterSidebar filters={filters} priceRange={priceRange} />
+              </aside>
+              <div
+                className={cn(
+                  'min-w-0 transition-opacity duration-200',
+                  pending && 'pointer-events-none opacity-50',
+                )}
+              >
+                {products.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <h2 className="mb-2 text-2xl">No products found</h2>
+                    <p className="text-muted-foreground">
+                      {term
+                        ? `We couldn't find any products matching "${term}"`
+                        : 'No products available'}
+                    </p>
+                  </div>
+                ) : (
+                  <InfiniteProductGrid
+                    key={location.search}
+                    initialProducts={products}
+                    initialPageInfo={pageInfo}
+                    variant="default"
+                    showSale
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </Sections>
+      </Container>
+      {tracking ? (
+        <TrackSearchClicks
+          config={tracking.config}
+          queryID={tracking.queryID}
+          firstPageCount={tracking.firstPageCount}
+        />
+      ) : null}
+      {term ? (
+        <Analytics.SearchView
+          data={{searchTerm: term, searchResults: {total, items: {products}}}}
+        />
+      ) : null}
+    </Page>
   );
 }
 
+const SEARCH_FILTER_FRAGMENT = `#graphql
+  fragment SearchFilterFields on Filter {
+    id
+    label
+    type
+    presentation
+    values {
+      id
+      label
+      count
+      input
+      swatch {
+        color
+        image {
+          previewImage {
+            url
+          }
+        }
+      }
+    }
+  }
+` as const;
+
+const SEARCH_BROWSE_QUERY = `#graphql
+  query SearchBrowse(
+    $query: String!
+    $first: Int!
+    $after: String
+    $productFilters: [ProductFilter!]
+    $sortKey: SearchSortKeys
+    $reverse: Boolean
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    search(
+      query: $query
+      first: $first
+      after: $after
+      productFilters: $productFilters
+      sortKey: $sortKey
+      reverse: $reverse
+      types: PRODUCT
+    ) {
+      totalCount
+      nodes {
+        __typename
+        ... on Product {
+          ...ProductCardItem
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      productFilters {
+        ...SearchFilterFields
+      }
+    }
+  }
+  ${PRODUCT_CARD_FRAGMENT}
+  ${SEARCH_FILTER_FRAGMENT}
+` as const;
+
+const SEARCH_FACETS_QUERY = `#graphql
+  query SearchFacets(
+    $query: String!
+    $productFilters: [ProductFilter!]
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    search(
+      query: $query
+      first: 1
+      productFilters: $productFilters
+      types: PRODUCT
+    ) {
+      totalCount
+      productFilters {
+        ...SearchFilterFields
+      }
+    }
+  }
+  ${SEARCH_FILTER_FRAGMENT}
+` as const;
 /**
  * Regular search query and fragments
  * (adjust as needed)
@@ -213,7 +513,7 @@ export const SEARCH_QUERY = `#graphql
 /**
  * Regular search fetcher
  */
-async function regularSearch({
+export async function regularSearch({
   request,
   context,
 }: Pick<
