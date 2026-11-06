@@ -18,6 +18,7 @@ import tailwindCss from './styles/tailwind.css?url';
 import {ErrorBoundaryContent} from '~/components/error/error-boundary-content';
 import {PageLayout} from './components/PageLayout';
 import {LocaleProvider} from '~/components/ui/locale-context';
+import {SiteSchema} from '~/components/schema/site-schema';
 
 export type RootLoader = typeof loader;
 
@@ -80,6 +81,7 @@ export async function loader(args: Route.LoaderArgs) {
     ...deferredData,
     ...criticalData,
     publicStoreDomain: env.PUBLIC_STORE_DOMAIN,
+    origin: new URL(args.request.url).origin,
     locale: `${storefront.i18n.language}-${storefront.i18n.country}`.toLowerCase(),
     shop: getShopAnalytics({
       storefront,
@@ -158,6 +160,7 @@ export function Layout({children}: {children?: React.ReactNode}) {
         <link rel="stylesheet" href={appStyles}></link>
         <Meta />
         <Links />
+        {rootData?.origin ? <SiteSchema origin={rootData.origin} /> : null}
       </head>
       <body>
         {children}

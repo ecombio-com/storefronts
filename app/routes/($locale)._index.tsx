@@ -1,177 +1,142 @@
-import {Await, useLoaderData, Link} from 'react-router';
+// Path: app/routes/($locale)._index.tsx
+import {useLoaderData} from 'react-router';
 import type {Route} from './+types/($locale)._index';
-import {Suspense} from 'react';
-import {Image} from '@shopify/hydrogen';
-import type {
-  FeaturedCollectionFragment,
-  RecommendedProductsQuery,
-} from 'storefrontapi.generated';
-import {ProductItem} from '~/components/ProductItem';
-import {MockShopNotice} from '~/components/MockShopNotice';
+import {CategoryCarousel} from '~/components/home/category-carousel';
+import {FeatureSplit} from '~/components/home/feature-split';
+import {Hero} from '~/components/home/hero';
+import {VideoFeature} from '~/components/home/video-feature';
+import {HomeShowcaseTabs} from '~/components/home/home-showcase-tabs';
+import {NewsletterSection} from '~/components/home/newsletter-section';
+import {PopularCategories} from '~/components/home/popular-categories';
+import {StudyCarousel} from '~/components/home/study-carousel';
+import {VideoCarousel} from '~/components/home/video-carousel';
+import {Container} from '~/components/ui/container';
+import {Page} from '~/components/ui/page';
+import {Sections} from '~/components/ui/sections';
+import {buildMeta} from '~/lib/blog';
+import {getUrls} from '~/lib/blog.server';
+import {communityStories, heroSlides, shopCategories} from '~/lib/home';
+import {getShowcaseSection} from '~/lib/home-showcase.server';
+import {
+  getHomeCategorySections,
+  getHomeCmsContent,
+  getHomeShopCategories,
+  getHomeShowcaseContent,
+  getHomeVideo,
+  type ReviewLike,
+} from '~/lib/home.server';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: 'Hydrogen | Home'}];
-};
+const TITLE = 'Home | Ecombio';
+const DESCRIPTION =
+  'Shop electric bikes, scooters and skateboards from top brands, with free shipping and a 1-year warranty.';
 
-export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
+export const meta: Route.MetaFunction = ({data}) =>
+  buildMeta({description: DESCRIPTION, title: TITLE, url: data?.canonicalUrl ?? '/'});
 
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
-  return {...deferredData, ...criticalData};
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- */
-async function loadCriticalData({context}: Route.LoaderArgs) {
-  const [{collections}] = await Promise.all([
-    context.storefront.query(FEATURED_COLLECTION_QUERY),
-    // Add other queries here, so that they are loaded in parallel
+export async function loader({context, request}: Route.LoaderArgs) {
+  const {storefront, yotpo} = context;
+  const [cms, showcaseContent, categorySections, shopCategoryItems, homeVideo] = await Promise.all([
+    getHomeCmsContent(storefront, {
+      getReviews: (id) =>
+        yotpo.getProductReviews(id) as unknown as Promise<{reviews: ReviewLike[]} | null>,
+    }),
+    getHomeShowcaseContent(storefront),
+    getHomeCategorySections(storefront),
+    getHomeShopCategories(storefront),
+    getHomeVideo(storefront),
   ]);
-
+  const showcase = await getShowcaseSection(storefront, showcaseContent, yotpo);
   return {
-    isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
-    featuredCollection: collections.nodes[0],
-  };
-}
-
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
-function loadDeferredData({context}: Route.LoaderArgs) {
-  const recommendedProducts = context.storefront
-    .query(RECOMMENDED_PRODUCTS_QUERY)
-    .catch((error: Error) => {
-      // Log query errors, but don't throw them so the page can still render
-      console.error(error);
-      return null;
-    });
-
-  return {
-    recommendedProducts,
+    canonicalUrl: getUrls(request).canonical,
+    homeVideo,
+    categorySections,
+    shopCategories: shopCategoryItems.length > 0 ? shopCategoryItems : shopCategories,
+    showcase,
+    slides: cms.slides ?? heroSlides,
+    stories: cms.stories ?? communityStories,
+    // Drop article bodies: the cards only need title, image, excerpt and date.
+    studies: (cms.studies ?? []).map((article) => ({...article, body: undefined})),
   };
 }
 
 export default function Homepage() {
-  const data = useLoaderData<typeof loader>();
+  const {categorySections, shopCategories: categories, homeVideo, showcase, slides, stories, studies} =
+    useLoaderData<typeof loader>();
   return (
-    <div className="home">
-      {data.isShopLinked ? null : <MockShopNotice />}
-      <FeaturedCollection collection={data.featuredCollection} />
-      <RecommendedProducts products={data.recommendedProducts} />
-    </div>
+    <Page className="pt-0">
+      <Sections>
+        <Hero slides={slides} />
+
+        <Container>
+          <CategoryCarousel title="Shop by category" items={categories} />
+        </Container>
+
+        {showcase ? (
+          <Container>
+            <HomeShowcaseTabs
+              title={showcase.title}
+              subtitle={showcase.subtitle}
+              tabs={showcase.tabs}
+              initialProducts={showcase.initialProducts}
+            />
+          </Container>
+        ) : null}
+
+        {categorySections.map((section) => (
+          <Container key={section.id}>
+            <PopularCategories title={section.title} subtitle={section.subtitle} items={section.items} />
+          </Container>
+        ))}
+
+        <Container>
+          <VideoCarousel title="Community stories" items={stories} />
+        </Container>
+
+        <Container>
+          <StudyCarousel title="Guides and articles" items={studies} />
+        </Container>
+
+        <Container>
+          <NewsletterSection privacyHref="/policies/privacy-policy" />
+        </Container>
+
+        <Container>
+          <div className="flex flex-col gap-ds-large md:gap-ds-xxlarge">
+            <FeatureSplit
+              title="Trade in your old ride"
+              description="Get credit toward your next e-bike when you trade in the one you are not using."
+              ctaLabel="Get started"
+              href="/pages/trade-in"
+              imageSide="left"
+              background="transparent"
+              image={{
+                src: 'https://cdn.shopify.com/s/files/1/0726/0641/7110/files/site-home-trade-in.webp?v=1791494937',
+                alt: 'Cash falling from the sky',
+              }}
+            />
+            <FeatureSplit
+              title="We are B-Corp certified"
+              description="Being a B-Corp means we hold ourselves to high standards, from our environmental impact to our hiring practices."
+              ctaLabel="Read more"
+              href="/pages/our-impact"
+              imageSide="right"
+              background="transparent"
+              image={{
+                src: 'https://cdn.shopify.com/s/files/1/0726/0641/7110/files/site-home-b-corp.webp?v=1791494934',
+                alt: 'Certified B Corporation',
+              }}
+            />
+            {homeVideo ? (
+              <VideoFeature
+                title={homeVideo.title}
+                description={homeVideo.description}
+                videoUrl={homeVideo.videoUrl}
+                videoTitle={homeVideo.title}
+              />
+            ) : null}
+          </div>
+        </Container>
+      </Sections>
+    </Page>
   );
 }
-
-function FeaturedCollection({
-  collection,
-}: {
-  collection: FeaturedCollectionFragment;
-}) {
-  if (!collection) return null;
-  const image = collection?.image;
-  return (
-    <Link
-      className="featured-collection"
-      to={`/collections/${collection.handle}`}
-    >
-      {image && (
-        <div className="featured-collection-image">
-          <Image
-            data={image}
-            sizes="100vw"
-            alt={image.altText || collection.title}
-          />
-        </div>
-      )}
-      <h1>{collection.title}</h1>
-    </Link>
-  );
-}
-
-function RecommendedProducts({
-  products,
-}: {
-  products: Promise<RecommendedProductsQuery | null>;
-}) {
-  return (
-    <section
-      className="recommended-products"
-      aria-labelledby="recommended-products"
-    >
-      <h2 id="recommended-products">Recommended Products</h2>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Await resolve={products}>
-          {(response) => (
-            <div className="recommended-products-grid">
-              {response
-                ? response.products.nodes.map((product) => (
-                    <ProductItem key={product.id} product={product} />
-                  ))
-                : null}
-            </div>
-          )}
-        </Await>
-      </Suspense>
-      <br />
-    </section>
-  );
-}
-
-const FEATURED_COLLECTION_QUERY = `#graphql
-  fragment FeaturedCollection on Collection {
-    id
-    title
-    image {
-      id
-      url
-      altText
-      width
-      height
-    }
-    handle
-  }
-  query FeaturedCollection($country: CountryCode, $language: LanguageCode)
-    @inContext(country: $country, language: $language) {
-    collections(first: 1, sortKey: UPDATED_AT, reverse: true) {
-      nodes {
-        ...FeaturedCollection
-      }
-    }
-  }
-` as const;
-
-const RECOMMENDED_PRODUCTS_QUERY = `#graphql
-  fragment RecommendedProduct on Product {
-    id
-    title
-    handle
-    priceRange {
-      minVariantPrice {
-        amount
-        currencyCode
-      }
-    }
-    featuredImage {
-      id
-      url
-      altText
-      width
-      height
-    }
-  }
-  query RecommendedProducts ($country: CountryCode, $language: LanguageCode)
-    @inContext(country: $country, language: $language) {
-    products(first: 4, sortKey: UPDATED_AT, reverse: true) {
-      nodes {
-        ...RecommendedProduct
-      }
-    }
-  }
-` as const;
