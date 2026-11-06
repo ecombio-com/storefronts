@@ -54,6 +54,9 @@ export const CUSTOMER_ORDER_QUERY = `#graphql
         status
       }
     }
+    totalShipping {
+      ...OrderMoney
+    }
     totalTax {
       ...OrderMoney
     }

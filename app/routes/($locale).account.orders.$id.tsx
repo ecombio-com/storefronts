@@ -1,10 +1,17 @@
+import {Image, Money} from '@shopify/hydrogen';
+import {cn} from 'cn';
+import {ArrowLeft} from 'lucide-react';
 import {redirect, useLoaderData} from 'react-router';
+import type {OrderLineItemFullFragment, OrderQuery} from 'customer-accountapi.generated';
 import type {Route} from './+types/($locale).account.orders.$id';
-import {Money, Image} from '@shopify/hydrogen';
-import type {
-  OrderLineItemFullFragment,
-  OrderQuery,
-} from 'customer-accountapi.generated';
+import {AccountCard} from '~/components/account/account-card';
+import {
+  formatOrderDate,
+  OrderStatusPill,
+} from '~/components/account/order-display';
+import {AccountPageHeader} from '~/components/account/page-header';
+import {buttonVariants} from '~/components/ui/button';
+import LocalizedLink from '~/components/ui/localized-link';
 import {CUSTOMER_ORDER_QUERY} from '~/graphql/customer-account/CustomerOrderQuery';
 
 export const meta: Route.MetaFunction = ({data}) => {
@@ -13,6 +20,7 @@ export const meta: Route.MetaFunction = ({data}) => {
 
 export async function loader({params, context}: Route.LoaderArgs) {
   const {customerAccount} = context;
+  await customerAccount.handleAuthStatus();
   if (!params.id) {
     return redirect('/account/orders');
   }
@@ -74,149 +82,142 @@ export async function loader({params, context}: Route.LoaderArgs) {
 }
 
 export default function OrderRoute() {
-  const {
-    order,
-    lineItems,
-    discountValue,
-    discountPercentage,
-    fulfillmentStatus,
-  } = useLoaderData<typeof loader>();
+  const {order, lineItems, discountValue, discountPercentage, fulfillmentStatus} =
+    useLoaderData<typeof loader>();
+  const shippingLines = order.shippingAddress?.formatted ?? [];
+  const hasDiscount = Boolean(discountPercentage || discountValue?.amount);
+
   return (
-    <div className="account-order">
-      <h2>Order {order.name}</h2>
-      <p>Placed on {new Date(order.processedAt!).toDateString()}</p>
-      {order.confirmationNumber && (
-        <p>Confirmation: {order.confirmationNumber}</p>
-      )}
-      <br />
-      <div>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Product</th>
-              <th scope="col">Price</th>
-              <th scope="col">Quantity</th>
-              <th scope="col">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lineItems.map((lineItem, lineItemIndex) => (
-              // eslint-disable-next-line react/no-array-index-key
-              <OrderLineRow key={lineItemIndex} lineItem={lineItem} />
-            ))}
-          </tbody>
-          <tfoot>
-            {((discountValue && discountValue.amount) ||
-              discountPercentage) && (
-              <tr>
-                <th scope="row" colSpan={3}>
-                  <p>Discounts</p>
-                </th>
-                <th scope="row">
-                  <p>Discounts</p>
-                </th>
-                <td>
-                  {discountPercentage ? (
-                    <span>-{discountPercentage}% OFF</span>
-                  ) : (
-                    discountValue && <Money data={discountValue!} />
-                  )}
-                </td>
-              </tr>
-            )}
-            <tr>
-              <th scope="row" colSpan={3}>
-                <p>Subtotal</p>
-              </th>
-              <th scope="row">
-                <p>Subtotal</p>
-              </th>
-              <td>
-                <Money data={order.subtotal!} />
-              </td>
-            </tr>
-            <tr>
-              <th scope="row" colSpan={3}>
-                Tax
-              </th>
-              <th scope="row">
-                <p>Tax</p>
-              </th>
-              <td>
-                <Money data={order.totalTax!} />
-              </td>
-            </tr>
-            <tr>
-              <th scope="row" colSpan={3}>
-                Total
-              </th>
-              <th scope="row">
-                <p>Total</p>
-              </th>
-              <td>
-                <Money data={order.totalPrice!} />
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-        <div>
-          <h3>Shipping Address</h3>
-          {order?.shippingAddress ? (
-            <address>
-              <p>{order.shippingAddress.name}</p>
-              {order.shippingAddress.formatted ? (
-                <p>{order.shippingAddress.formatted}</p>
-              ) : (
-                ''
-              )}
-              {order.shippingAddress.formattedArea ? (
-                <p>{order.shippingAddress.formattedArea}</p>
-              ) : (
-                ''
-              )}
-            </address>
-          ) : (
-            <p>No shipping address defined</p>
-          )}
-          <h3>Status</h3>
-          <div>
-            <p>{fulfillmentStatus}</p>
+    <>
+      <AccountPageHeader
+        title={order.name}
+        description={order.processedAt ? formatOrderDate(order.processedAt) : undefined}
+      />
+
+      <div className="grid gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {fulfillmentStatus !== 'N/A' ? <OrderStatusPill status={fulfillmentStatus} /> : null}
+            {order.confirmationNumber ? (
+              <span className="text-ds-small text-muted-foreground">
+                Confirmation: {order.confirmationNumber}
+              </span>
+            ) : null}
+          </div>
+          <LocalizedLink
+            href="/account/orders"
+            className={cn(buttonVariants({size: 'sm', variant: 'outline'}), 'gap-1.5')}
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to orders
+          </LocalizedLink>
+        </div>
+
+        <div className="grid items-start gap-4 md:grid-cols-3">
+          <AccountCard className="md:col-span-2" title="Items">
+            <ul className="grid divide-y divide-border">
+              {lineItems.map((item) => (
+                <OrderLineRow key={item.id} item={item} />
+              ))}
+            </ul>
+          </AccountCard>
+
+          <div className="grid gap-4">
+            <AccountCard title="Order summary">
+              <dl className="grid gap-2 text-ds-regular">
+                {order.subtotal ? (
+                  <SummaryRow label="Subtotal">
+                    <Money as="span" data={order.subtotal} />
+                  </SummaryRow>
+                ) : null}
+                {hasDiscount ? (
+                  <SummaryRow label="Discounts">
+                    {discountPercentage ? (
+                      <span>-{discountPercentage}%</span>
+                    ) : discountValue ? (
+                      <Money as="span" data={discountValue} />
+                    ) : null}
+                  </SummaryRow>
+                ) : null}
+                {order.totalShipping ? (
+                  <SummaryRow label="Shipping">
+                    <Money as="span" data={order.totalShipping} />
+                  </SummaryRow>
+                ) : null}
+                {order.totalTax ? (
+                  <SummaryRow label="Tax">
+                    <Money as="span" data={order.totalTax} />
+                  </SummaryRow>
+                ) : null}
+                <div className="flex items-center justify-between border-t border-border pt-2 font-medium">
+                  <dt>Total</dt>
+                  <dd className="font-mono tabular-nums">
+                    <Money as="span" data={order.totalPrice} />
+                  </dd>
+                </div>
+              </dl>
+              <a
+                href={order.statusPageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(buttonVariants({size: 'sm', variant: 'outline'}), 'w-fit')}
+              >
+                View order status
+              </a>
+            </AccountCard>
+
+            {shippingLines.length > 0 ? (
+              <AccountCard title="Shipping address">
+                <address className="text-ds-regular text-muted-foreground not-italic">
+                  {shippingLines.map((line) => (
+                    <span key={line} className="block">
+                      {line}
+                    </span>
+                  ))}
+                </address>
+              </AccountCard>
+            ) : null}
           </div>
         </div>
       </div>
-      <br />
-      <p>
-        <a target="_blank" href={order.statusPageUrl} rel="noreferrer">
-          View Order Status →
-        </a>
-      </p>
+    </>
+  );
+}
+
+function SummaryRow({children, label}: {children: React.ReactNode; label: string}) {
+  return (
+    <div className="flex items-center justify-between">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-mono tabular-nums">{children}</dd>
     </div>
   );
 }
 
-function OrderLineRow({lineItem}: {lineItem: OrderLineItemFullFragment}) {
+function OrderLineRow({item}: {item: OrderLineItemFullFragment}) {
+  const currencyCode = item.price?.currencyCode;
+  const lineTotal =
+    Number(item.price?.amount ?? 0) * item.quantity - Number(item.totalDiscount?.amount ?? 0);
   return (
-    <tr key={lineItem.id}>
-      <td>
-        <div>
-          {lineItem?.image && (
-            <div>
-              <Image data={lineItem.image} width={96} height={96} />
-            </div>
-          )}
-          <div>
-            <p>{lineItem.title}</p>
-            <small>{lineItem.variantTitle}</small>
-          </div>
-        </div>
-      </td>
-      <td>
-        <Money data={lineItem.price!} />
-      </td>
-      <td>{lineItem.quantity}</td>
-      <td>
-        <Money data={lineItem.totalDiscount!} />
-      </td>
-    </tr>
+    <li className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+      <div className="relative size-16 shrink-0 overflow-hidden rounded-ds-md bg-muted">
+        {item.image ? (
+          <Image data={item.image} sizes="64px" className="size-full object-cover" />
+        ) : null}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-ds-regular font-medium">{item.title}</p>
+        {item.variantTitle ? (
+          <p className="truncate text-ds-small text-muted-foreground">{item.variantTitle}</p>
+        ) : null}
+        <p className="text-ds-small text-muted-foreground">Qty {item.quantity}</p>
+      </div>
+      {currencyCode ? (
+        <Money
+          as="span"
+          data={{amount: String(lineTotal), currencyCode}}
+          className="font-mono text-ds-regular tabular-nums"
+        />
+      ) : null}
+    </li>
   );
 }
