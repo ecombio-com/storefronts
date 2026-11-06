@@ -1,88 +1,77 @@
+import {getSeoMeta} from '@shopify/hydrogen';
 import {useLoaderData} from 'react-router';
 import type {Route} from './+types/($locale).pages.$handle';
+import {PageBlocks} from '~/components/content/page-blocks';
+import {RichTextPage} from '~/components/content/rich-text-page';
 import {isHiddenPageHandle} from '~/lib/hidden-pages';
-import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {pageBlocksFromBody, parsePageBlocks} from '~/lib/page-blocks';
 
-export const meta: Route.MetaFunction = ({data}) => {
-  return [{title: `Hydrogen | ${data?.page.title ?? ''}`}];
-};
+export const meta: Route.MetaFunction = ({data}) =>
+  data
+    ? (getSeoMeta({
+        title: data.seo.title,
+        description: data.seo.description,
+        url: data.canonical,
+      }) ?? [])
+    : [];
 
-export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
-  return {...deferredData, ...criticalData};
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- */
-async function loadCriticalData({context, request, params}: Route.LoaderArgs) {
-  if (!params.handle) {
-    throw new Error('Missing page handle');
-  }
-
-  const [{page}] = await Promise.all([
-    context.storefront.query(PAGE_QUERY, {
-      variables: {
-        handle: params.handle,
-      },
-    }),
-    // Add other queries here, so that they are loaded in parallel
-  ]);
-
-  if (!page || isHiddenPageHandle(params.handle)) {
+export async function loader({context, params, request}: Route.LoaderArgs) {
+  const {handle} = params;
+  if (!handle || isHiddenPageHandle(handle)) {
     throw new Response('Not Found', {status: 404});
   }
 
-  redirectIfHandleIsLocalized(request, {handle: params.handle, data: page});
+  const {page} = await context.storefront.query(PAGE_QUERY, {
+    variables: {handle},
+    cache: context.storefront.CacheLong(),
+  });
+  if (!page) throw new Response('Not Found', {status: 404});
 
+  const bodyBlocks = pageBlocksFromBody(page.body);
+  const layoutBlocks = parsePageBlocks(page.layoutBlocks?.value);
+
+  // Same precedence as Next: shortcode layout in body, then layout_blocks metafield, then rich text.
+  const blocks = bodyBlocks.some((b) => b.type !== 'body')
+    ? bodyBlocks
+    : layoutBlocks.length > 0
+      ? layoutBlocks
+      : null;
+
+  const url = new URL(request.url);
   return {
-    page,
+    blocks,
+    body: blocks ? null : page.body,
+    title: page.title,
+    canonical: `${url.origin}${url.pathname}`,
+    seo: {
+      title: page.seo?.title ?? page.title,
+      description: page.seo?.description ?? page.bodySummary,
+    },
   };
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
-function loadDeferredData({context}: Route.LoaderArgs) {
-  return {};
-}
-
-export default function Page() {
-  const {page} = useLoaderData<typeof loader>();
-
-  return (
-    <div className="page">
-      <header>
-        <h1>{page.title}</h1>
-      </header>
-      <main dangerouslySetInnerHTML={{__html: page.body}} />
-    </div>
-  );
+export default function ShopifyPage() {
+  const {blocks, body, title} = useLoaderData<typeof loader>();
+  if (blocks) return <PageBlocks blocks={blocks} />;
+  return <RichTextPage body={body ?? ''} title={title} />;
 }
 
 const PAGE_QUERY = `#graphql
-  query Page(
-    $language: LanguageCode,
-    $country: CountryCode,
-    $handle: String!
-  )
-  @inContext(language: $language, country: $country) {
+  query Page($handle: String!, $country: CountryCode, $language: LanguageCode)
+    @inContext(country: $country, language: $language) {
     page(handle: $handle) {
-      handle
       id
+      handle
       title
       body
+      bodySummary
+      updatedAt
       seo {
-        description
         title
+        description
+      }
+      layoutBlocks: metafield(namespace: "custom", key: "layout_blocks") {
+        value
       }
     }
   }
