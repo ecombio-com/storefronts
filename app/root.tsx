@@ -19,7 +19,7 @@ import {ErrorBoundaryContent} from '~/components/error/error-boundary-content';
 import {PageLayout} from './components/PageLayout';
 import {LocaleProvider} from '~/components/ui/locale-context';
 import {SiteSchema} from '~/components/schema/site-schema';
-import {getAnnouncementBar} from '~/lib/announcements.server';
+import {getAnnouncementBar, isAnnouncementDismissed} from '~/lib/announcements.server';
 
 export type RootLoader = typeof loader;
 
@@ -103,7 +103,7 @@ export async function loader(args: Route.LoaderArgs) {
  * Load data necessary for rendering content above the fold. This is the critical data
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
-async function loadCriticalData({context}: Route.LoaderArgs) {
+async function loadCriticalData({context, request}: Route.LoaderArgs) {
   const {storefront} = context;
 
   const [header, announcementBar] = await Promise.all([
@@ -117,7 +117,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     // Add other queries here, so that they are loaded in parallel
   ]);
 
-  return {announcementBar, header};
+  return {announcementBar: isAnnouncementDismissed(request) ? null : announcementBar, header};
 }
 
 /**

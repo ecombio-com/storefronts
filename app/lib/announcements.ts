@@ -21,3 +21,6 @@ export type AnnouncementBarData = {
   intervalMs: number;
   items: AnnouncementItem[];
 };
+
+// Session cookie set when a shopper closes the bar (read on the server, cleared on a hard refresh).
+export const ANNOUNCEMENT_DISMISS_COOKIE = 'announcement_dismissed';

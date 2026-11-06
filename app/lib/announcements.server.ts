@@ -1,6 +1,12 @@
 import type {Storefront} from '@shopify/hydrogen';
 
-import type {AnnouncementBarData, AnnouncementItem, Device, Variant} from '~/lib/announcements';
+import {
+  ANNOUNCEMENT_DISMISS_COOKIE,
+  type AnnouncementBarData,
+  type AnnouncementItem,
+  type Device,
+  type Variant,
+} from '~/lib/announcements';
 
 // Edited in Shopify admin: Content > Metaobjects > Announcement bar (handle main).
 // Types and starter entries: scripts/shopify/setup-announcements.ps1.
@@ -106,4 +112,14 @@ export async function getAnnouncementBar(storefront: Storefront): Promise<Announ
     console.error(error);
     return null;
   }
+}
+
+// Closing the bar sets a session cookie. Link clicks, other tabs and normal refreshes keep it hidden.
+// A hard refresh (Ctrl+Shift+R) sends Cache-Control / Pragma: no-cache, so the bar shows again.
+export function isAnnouncementDismissed(request: Request): boolean {
+  const cacheControl = request.headers.get('cache-control') ?? '';
+  const pragma = request.headers.get('pragma') ?? '';
+  if (/no-cache/i.test(cacheControl) || /no-cache/i.test(pragma)) return false;
+  const cookie = request.headers.get('cookie') ?? '';
+  return cookie.split(';').some((part) => part.trim() === `${ANNOUNCEMENT_DISMISS_COOKIE}=1`);
 }

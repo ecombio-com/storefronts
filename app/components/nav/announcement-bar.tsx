@@ -4,7 +4,12 @@ import {type ReactNode, useEffect, useState} from 'react';
 
 import {ChevronLeftIcon, ChevronRightIcon} from '~/components/ui/icons';
 import LocalizedLink from '~/components/ui/localized-link';
-import type {AnnouncementBarData, Device, Variant} from '~/lib/announcements';
+import {
+  ANNOUNCEMENT_DISMISS_COOKIE,
+  type AnnouncementBarData,
+  type Device,
+  type Variant,
+} from '~/lib/announcements';
 
 // Button labels only. The messages come from Shopify (announcement_bar/main).
 const COPY = {
@@ -47,7 +52,8 @@ function SmartLink({href, className, children}: {href: string; className?: strin
   );
 }
 
-// Closing hides the bar until the next page load; nothing is saved.
+// Closing sets a session cookie: links, tabs and normal refreshes keep the bar hidden;
+// a hard refresh (Ctrl+Shift+R) shows it again (see isAnnouncementDismissed).
 export function Announcement({bar}: {bar: AnnouncementBarData | null}) {
   if (!bar) return null;
   return <AnnouncementBar {...bar} />;
@@ -62,6 +68,8 @@ function AnnouncementBar({autoRotate, dismissible, intervalMs, items}: Announcem
 
   useEffect(() => {
     setNow(Date.now());
+    // The bar is showing (first visit or hard refresh), so clear any old dismissal.
+    document.cookie = `${ANNOUNCEMENT_DISMISS_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
   }, []);
 
   useEffect(() => {
@@ -105,6 +113,8 @@ function AnnouncementBar({autoRotate, dismissible, intervalMs, items}: Announcem
 
   const go = (delta: number) => setIndex((i) => (i + delta + count) % count);
   const dismiss = () => {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${ANNOUNCEMENT_DISMISS_COOKIE}=1; Path=/; SameSite=Lax${secure}`;
     setPhase('closing');
     window.setTimeout(() => setPhase('gone'), CLOSE_MS);
   };
